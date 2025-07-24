@@ -1,2 +1,2 @@
 # [Component]  
-This folder contains the _SENSOR(S)_ code for AetherLink.
+This folder contains the _SENSOR_ code for AetherLink.
