@@ -1,2 +1,2 @@
 # [Component]  
-This folder contains the controller code for AetherLink.
+This folder contains the _CONTROLLER_ code for AetherLink.
