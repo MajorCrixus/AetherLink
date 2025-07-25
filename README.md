@@ -44,10 +44,9 @@ chmod +x scripts/install.sh
 Use the following commands:
 
 ### UI Server
-```
+```bash
 ./scripts/start.sh ui
 ```
-### or just
-```
+```bash
 python3 main.py ui
 ```
