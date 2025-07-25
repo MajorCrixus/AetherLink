@@ -13,14 +13,6 @@ _AetherLink_ is a modular, software-defined SATCOM antenna control system built 
 ## Project Structure
 See `/docs/architecture.md` for full layout, or jump into `/software/` for subsystems.
 
-## Setup
-Run the install script on Jetson AGX Orin:
-
-```bash
-chmod +x scripts/install.sh
-./scripts/install.sh
-```
-
 ## Folder Structure
 AetherLink/
 ├── main.py
@@ -37,3 +29,13 @@ AetherLink/
 ├── examples/sample_satellite.json
 ├── LICENSE
 ├── .gitignore
+
+## Setup
+Run the install script on Jetson AGX Orin:
+
+```bash
+chmod +x scripts/install.sh
+./scripts/install.sh
+```
+
+
