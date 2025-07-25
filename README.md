@@ -43,9 +43,11 @@ chmod +x scripts/install.sh
 ## CLI
 Use the following commands:
 
-# UI Server
+### UI Server
 ```
 ./scripts/start.sh ui
-# or just
+```
+### or just
+```
 python3 main.py ui
 ```
