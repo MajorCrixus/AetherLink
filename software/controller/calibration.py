@@ -8,10 +8,9 @@ import yaml
 
 # Load configuration
 CONFIG_PATH = "software/config/settings.yaml"
-with open(CONFIG_PATH, "r") as f:
-    config = yaml.safe_load(f)
+from software.config.config_loader import get
 
-soft_offset = config["system"].get("soft_limit_offset_deg", 2.0)
+soft_offset = float(get("system.soft_limit_offset_deg", 2.0))
 
 def detect_stall(axis_name):
     """
@@ -54,8 +53,8 @@ def run_full_calibration():
     Runs calibration for all defined axes.
     """
     print("🚀 Running full calibration routine...\n")
-    axes = config["motor_settings"]
-    ports = config["serial_ports"]
+    axes = get("motor_settings")
+    ports = get("serial_ports")
 
     for axis_name in axes:
         port = ports.get(f"{axis_name}_motor", "/dev/null")
