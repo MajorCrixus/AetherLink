@@ -19,3 +19,20 @@ Run the install script on Jetson AGX Orin:
 ```bash
 chmod +x scripts/install.sh
 ./scripts/install.sh
+
+## Folder Structure
+AetherLink/
+├── main.py
+├── scripts/
+│   ├── install.sh
+│   ├── start.sh
+│   └── test_motors.py
+├── software/
+│   ├── config/settings.yaml
+│   ├── controller/calibration.py
+│   ├── sensors/gps_parser.py
+│   ├── sensors/imu_parser.py
+│   └── sdr/box_scan.py
+├── examples/sample_satellite.json
+├── LICENSE
+├── .gitignore
