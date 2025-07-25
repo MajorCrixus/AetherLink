@@ -56,3 +56,4 @@ def get_current_target():
 # Only runs if launched directly
 if __name__ == "__main__":
     uvicorn.run("software.ui.server:app", host="0.0.0.0", port=8000, reload=True)
+
