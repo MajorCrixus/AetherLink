@@ -19,6 +19,7 @@ Run the install script on Jetson AGX Orin:
 ```bash
 chmod +x scripts/install.sh
 ./scripts/install.sh
+```
 
 ## Folder Structure
 AetherLink/
