@@ -6,3 +6,8 @@ The WT901C is a multi-sensor device that detects acceleration, angular velocity,
 - Low cost of ownership: remote diagnostics and lifetime technical support by WITMOTION service team
 - Developed tutorial: providing manual, datasheet, Demo video, free software for Windows computer, APP for Android smartphones, and sample code for MCU integration including Python, STM32, Arduino, Matlab, Raspberry Pi, C++, communication protocol for project development
 - WITMOTION sensors have been praised by thousands of engineers as a recommended attitude measurement solution
+
+## Resources
+Standard Protocol github - https://github.com/WITMOTION/WitStandardProtocol_JY901
+Standard protocol SDK - https://wit-motion.gitbook.io/witmotion-sdk/wit-standard-protocol/sdk
+Device Report (Tons of resources) - https://device.report/manual/10859377
