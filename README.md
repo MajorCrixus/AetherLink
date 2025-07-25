@@ -40,4 +40,12 @@ chmod +x scripts/install.sh
 ./scripts/install.sh
 ```
 
+## CLI
+Use the following commands:
 
+# UI Server
+```
+./scripts/start.sh ui
+# or just
+python3 main.py ui
+```
