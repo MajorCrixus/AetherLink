@@ -35,6 +35,7 @@ gpiochip0 [tegra234-gpio] (164 lines)
 gpiochip1 [tegra234-gpio-aon] (32 lines)
 gpiochip2 [ftdi-cbus] (4 lines)</code></p>
 
+##
 
 ## Install Jetson.GPIO
 ### Create a Virtual Environment
@@ -66,6 +67,7 @@ Verify:
 ```
 python3 -c "import Jetson.GPIO as GPIO; print(GPIO.VERSION)"
 ```
+##
 
 ### Final Steps
 <p data-start="1033" data-end="1072"><strong data-start="1033" data-end="1071">Confirm you’re in the <code data-start="1057" data-end="1063">gpio</code> group</strong>:</p>
