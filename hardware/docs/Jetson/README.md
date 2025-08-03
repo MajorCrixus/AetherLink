@@ -1,3 +1,9 @@
+## 40-pin header assignment
+<p>
+        <img alt="" src="https://developer.download.nvidia.com/embedded/images/jetsonAgxOrin/getting_started/jao_cbspec_figure_3-4_white-bg.png#only-light">
+        <img alt="" src="https://developer.download.nvidia.com/embedded/images/jetsonAgxOrin/getting_started/jao_cbspec_figure_3-4_black-bg.png#only-dark">  
+</p>
+
 ## Low-Level Hardware & OS Verification
 ### Jetson Model
 ```
