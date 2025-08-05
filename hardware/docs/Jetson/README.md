@@ -1,6 +1,6 @@
 # 🚀 AetherLink: Jetson AGX Orin System Setup
 
-This document captures the baseline setup, environment configuration, and ongoing system maintenance procedures used for the [AetherLink SATCOM Project](https://github.com/YOUR_REPO). It is based on the **NVIDIA Jetson AGX Orin 64GB Developer Kit** and adheres to best practices from the [Jetson Linux Developer Guide (R36.4.4)](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html).
+This document captures the baseline setup, environment configuration, and ongoing system maintenance procedures used for the AetherLink SATCOM Project]. It is based on the **NVIDIA Jetson AGX Orin 64GB Developer Kit** and adheres to best practices from the [Jetson Linux Developer Guide (R36.4.4)](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html).
 
 ---
 
@@ -209,21 +209,11 @@ sudo apt clean
 
 ---
 
-## 🔭 Recommended Next Steps
-
-* ✅ \[ ] Configure persistent systemd services for motor calibration on boot
-* ✅ \[ ] Implement watchdog for comms loss with motors
-* ✅ \[ ] Finish integration with HackRF and signal strength feedback loop
-* ✅ \[ ] Auto-connect to Wi-Fi and push logs to cloud
-
----
-
 ## 📌 References
 
 * 📚 [Jetson Linux Developer Guide R36.4.4](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html)
 * 🧰 [Jetson AGX Orin Hardware Overview](https://developer.nvidia.com/embedded/jetson-agx-orin-devkit)
 * 🛠️ [JetsonHacks GPIO Patch](https://github.com/JetsonHacks/jetson-agx-orin-gpio-patch)
-* 🛡️ [AetherLink SATCOM GitHub Repository](https://github.com/YOUR_REPO)
 * 🔧 [Jetson SDK Manager](https://developer.nvidia.com/jetson-sdk-manager)
 * ⚙️ [NVIDIA JetPack Archive](https://developer.nvidia.com/embedded/jetpack-archive)
 * 🔫 [Jetson Pinmux Config Tool](https://developer.nvidia.com/embedded/downloads#?search=pinmux)
