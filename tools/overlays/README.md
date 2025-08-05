@@ -6,30 +6,48 @@ This directory contains scripts and device tree source files used to configure a
 
 ## 📄 [`apply_overlay.sh`](./apply_overlay.sh)
 
-Automates the end-to-end process of:
-
-* Compiling a `.dts` file into a `.dtbo` overlay
-* Installing it into `/boot/firmware/`
-* Patching the `extlinux.conf` boot configuration
-* Prompting for reboot
+Automates the end-to-end process of managing device tree overlays. This script is used for compiling `.dts` files into `.dtbo` format, placing them in the correct boot directory, modifying `extlinux.conf`, and prompting for reboot.
 
 ### ✅ Features
 
-* Robust error handling
-* Status output for each step
-* Backs up `extlinux.conf` before modifying
-* Skips duplicate patch entries if overlay is already present
+* Automates DTS to DTBO compilation using `dtc`
+* Installs overlays to `/boot/firmware/`
+* Automatically backs up and patches `extlinux.conf`
+* Handles duplicate entries gracefully
+* Provides verbose status output with error handling
 
-### 📦 Requirements
+### 🎯 Goals
 
-* `dtc` (Device Tree Compiler)
-* Root privileges
+* Reduce manual effort and prevent misconfiguration
+* Simplify the deployment of device tree overlays
+* Provide a reproducible method to manage GPIO assignments
 
-### 🧪 Example Usage
+### ⚙️ Usage
 
 ```bash
 sudo ./apply_overlay.sh pin7_overlay.dts
 ```
+
+> This script should be run from a **non-virtual environment** shell with root privileges.
+
+### 📦 Dependencies
+
+* `dtc` (Device Tree Compiler)
+* Bash (Unix shell)
+* Superuser (sudo) permissions
+
+### 🛡️ Best Practices
+
+* Always keep a backup of `extlinux.conf` before patching
+* Reboot after running the script to ensure overlays are applied
+* Maintain overlays in version control to track changes
+* Ensure your `.dts` file matches your board and carrier config
+
+### 🔗 Related Documentation
+
+* [Jetson Linux Developer Guide - Configuring Expansion Headers](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/HR/ConfiguringTheJetsonExpansionHeaders.html)
+* [JetsonHacks: Device Tree Overlays on Jetson](https://jetsonhacks.com/2025/04/07/device-tree-overlays-on-jetson-scary-but-fun/)
+* [`system_setup.md`](../../system_setup.md)
 
 ---
 
@@ -37,7 +55,7 @@ sudo ./apply_overlay.sh pin7_overlay.dts
 
 ### 📄 [`pin7_overlay.dts`](./pin7_overlay.dts)
 
-This overlay is used to configure **40-pin header Pin 7** (`SOC_GPIO33`) as a bidirectional GPIO with an internal pull-up. It is used in this project to connect a **limit switch on the azimuth servo**.
+Configures **40-pin header Pin 7** (`SOC_GPIO33`) for GPIO use with internal pull-up. Used in this project for the **azimuth servo limit switch** input.
 
 #### Pin Mapping
 
@@ -55,23 +73,16 @@ nvidia,enable-input = <1>; // Input enabled
 nvidia,io-high-voltage = <1>; // 3.3V
 ```
 
----
+> This DTS file is not executable and does not require a virtual environment.
 
-## 📌 Related Documentation
+### 🛡️ Best Practices
 
-* [Jetson Linux Developer Guide - Configuring Expansion Headers](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/HR/ConfiguringTheJetsonExpansionHeaders.html)
-* [JetsonHacks: Device Tree Overlays on Jetson](https://jetsonhacks.com/2025/04/07/device-tree-overlays-on-jetson-scary-but-fun/)
-* [`system_setup.md`](../../system_setup.md) – for a full breakdown of GPIO configuration process
+* Make sure to validate pin name compatibility in the pinmux spreadsheet tool
+* When in doubt, use external resistors in addition to internal pull config
+* Use overlays instead of CLI-based GPIO manipulation for reliability
 
----
+### 🔗 Related Documentation
 
-## 🛡️ Best Practices
-
-* Always reboot after applying a new overlay
-* Use a version-controlled `.dts` file for reproducibility
-* Back up your original boot config (`extlinux.conf`) before applying changes
-* Verify overlay has loaded with:
-
-  ```bash
-  sudo cat /proc/device-tree/overlays/
-  ```
+* [Pinmux Configuration Tool](https://developer.nvidia.com/embedded/downloads#?search=pinmux)
+* [Pin 7 DTS Usage in `system_setup.md`](../../system_setup.md)
+* [GPIO Setup Guide](../../hardware/docs/Jetson/gpio_setup.md)
