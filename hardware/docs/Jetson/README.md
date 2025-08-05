@@ -1,6 +1,6 @@
 # 🚀 AetherLink: Jetson AGX Orin System Setup
 
-This document captures the baseline setup, environment configuration, and ongoing system maintenance procedures used for the AetherLink SATCOM Project. It is based on the **NVIDIA Jetson AGX Orin 64GB Developer Kit** and adheres to best practices from the [Jetson Linux Developer Guide (R36.4.4)](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html).
+This document captures the baseline setup, environment configuration, and ongoing system maintenance procedures used for the [AetherLink SATCOM Project](https://github.com/YOUR_REPO). It is based on the **NVIDIA Jetson AGX Orin 64GB Developer Kit** and adheres to best practices from the [Jetson Linux Developer Guide (R36.4.4)](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html).
 
 ---
 
@@ -58,38 +58,123 @@ Refer to official SDK Manager or CLI method:
 
 ---
 
-## ⚙️ GPIO Setup (Bidirectional Patch for Pin 7)
+## ⚖️ Important Note on Jetson GPIO (40-pin Header Issues)
 
-1. **Install Jetson.GPIO**:
+The NVIDIA Jetson AGX Orin Developer Kit does **not support GPIO on the 40-pin header by default**, due to the **default pinmux settings** assigning many pins to alternate (SFIO) functions such as I2C, UART, or audio clocks.
+
+### 📍 Use Case: Azimuth Limit Switch
+
+In this project, **Pin 7** on the 40-pin header is used as an **input for the reed switch limit detection** on the azimuth servo. This pin maps to:
+
+* **Verilog Ball Name**: `SOC_GPIO33`
+* **Package Ball Name**: `GP66`
+* **Customer Usage**: `GPIO3_PQ.06`
+* **Devkit Usage**: `MCLK05_MCLK_40PIN`
+
+This pin is assigned to **MCLK05** (a master clock) by default and must be reassigned as a GPIO input.
+
+---
+
+### 🛠️ Fix: Use the Jetson Pinmux Configuration Tool
+
+NVIDIA provides a macro-enabled spreadsheet that allows you to safely reassign the pinmux functionality and generate device tree source files.
+
+* **Download Tool**:
+  📅 [Jetson AGX Orin Series Pinmux Config Tool](https://developer.nvidia.com/embedded/downloads#?search=pinmux)
+
+> ⚠️ This tool **requires Microsoft Excel on Windows**. Most Linux spreadsheet tools will not run macros.
+
+---
+
+### 🔧 What to Modify
+
+1. **Open** the `.xlsm` in **Excel (Windows)**.
+2. Locate the row for **Pin 7**:
+
+   * Pin: `L57`, Verilog: `SOC_GPIO33`, Ball: `GP66`
+3. Modify:
+
+   * **Function**: `gpio`
+   * **Direction**: `input`
+   * **Pull**: `up`
+   * **Initial State**: `high`
+   * **3.3V Tolerance**: `enable`
+4. Use the spreadsheet macro to generate `.dtsi` and `.cfg` files.
+
+---
+
+### 🔪 Alternative: CLI Pin Configuration (Temporary Only)
+
+You can also configure GPIO direction from the command line using `gpiod`:
 
 ```bash
-pip install Jetson.GPIO
+gpioset gpiochip4 6=1  # Example: set GPIO3_PQ.06 high
 ```
 
-2. **Apply GPIO Patch**:
+> ⚠️ However, this **does not persist after reboot** and is **overridden by any loaded device tree overlay** that conflicts with the setting.
+
+---
+
+### 🛠️ Apply the Overlay
 
 ```bash
-git clone https://github.com/JetsonHacks/jetson-agx-orin-gpio-patch.git
-cd jetson-agx-orin-gpio-patch
-./install.sh  # Review before running
-```
+# Compile the DTS file
+dtc -I dts -O dtb -o pin7_overlay.dtbo pin7_overlay.dts
 
-3. **Enable Pin 7 as Bidirectional**:
-   Create and compile a custom overlay (example `.dts` provided in repo).
-
-4. **Deploy .dtbo to `/boot/firmware/`** and update `/boot/extlinux/extlinux.conf`:
-
-```bash
+# Copy to firmware directory
 sudo cp pin7_overlay.dtbo /boot/firmware/
+
+# Edit extlinux.conf
 sudo nano /boot/extlinux/extlinux.conf
-# Add to FDT entry or overlays
+# Add to FDT or overlays line:
+# FDT /boot/firmware/pin7_overlay.dtbo
 ```
 
-5. **Reboot and verify**:
+Reboot to apply:
 
 ```bash
 sudo reboot
+```
+
+Verify:
+
+```bash
 sudo cat /proc/device-tree/overlays/
+```
+
+---
+
+### 📂 Sample `pin7_overlay.dts`
+
+```dts
+/dts-v1/;
+/plugin/;
+
+/ {
+    jetson-header-name = "Jetson 40pin Header";
+    overlay-name = "Pin 7 GPIO Bidirectional";
+    compatible = "nvidia,p3737-0000+p3701-0005";
+
+    fragment@0 {
+        target = <&pinmux>;
+
+        __overlay__ {
+            pinctrl-names = "default";
+            pinctrl-0 = <&jetson_io_pinmux>;
+
+            jetson_io_pinmux: header-pinmux {
+                hdr40-pin7 {
+                    nvidia,pins = "soc_gpio33_pq6";
+                    nvidia,function = "gpio";
+                    nvidia,pull = <1>;         // 1 = pull-up
+                    nvidia,tristate = <0>;      // 0 = driven
+                    nvidia,enable-input = <1>;  // 1 = input enabled
+                    nvidia,io-high-voltage = <1>; // 3.3V logic
+                };
+            };
+        };
+    };
+};
 ```
 
 ---
@@ -124,10 +209,21 @@ sudo apt clean
 
 ---
 
+## 🔭 Recommended Next Steps
+
+* ✅ \[ ] Configure persistent systemd services for motor calibration on boot
+* ✅ \[ ] Implement watchdog for comms loss with motors
+* ✅ \[ ] Finish integration with HackRF and signal strength feedback loop
+* ✅ \[ ] Auto-connect to Wi-Fi and push logs to cloud
+
+---
+
 ## 📌 References
 
 * 📚 [Jetson Linux Developer Guide R36.4.4](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html)
 * 🧰 [Jetson AGX Orin Hardware Overview](https://developer.nvidia.com/embedded/jetson-agx-orin-devkit)
 * 🛠️ [JetsonHacks GPIO Patch](https://github.com/JetsonHacks/jetson-agx-orin-gpio-patch)
+* 🛡️ [AetherLink SATCOM GitHub Repository](https://github.com/YOUR_REPO)
 * 🔧 [Jetson SDK Manager](https://developer.nvidia.com/jetson-sdk-manager)
 * ⚙️ [NVIDIA JetPack Archive](https://developer.nvidia.com/embedded/jetpack-archive)
+* 🔫 [Jetson Pinmux Config Tool](https://developer.nvidia.com/embedded/downloads#?search=pinmux)
