@@ -1,102 +1,133 @@
-## 40-pin header assignment
-<p>
-        <img alt="" src="https://developer.download.nvidia.com/embedded/images/jetsonAgxOrin/getting_started/jao_cbspec_figure_3-4_white-bg.png#only-light">
-        <img alt="" src="https://developer.download.nvidia.com/embedded/images/jetsonAgxOrin/getting_started/jao_cbspec_figure_3-4_black-bg.png#only-dark">  
-</p>
+# 🚀 AetherLink: Jetson AGX Orin System Setup
 
-## Low-Level Hardware & OS Verification
-### Jetson Model
-```
-cat /proc/device-tree/model
-```
-<p data-start="427" data-end="498">→ Return: <code data-start="459" data-end="497">NVIDIA Jetson AGX Orin Developer Kit</code></p>
+This document captures the baseline setup, environment configuration, and ongoing system maintenance procedures used for the AetherLink SATCOM Project. It is based on the **NVIDIA Jetson AGX Orin 64GB Developer Kit** and adheres to best practices from the [Jetson Linux Developer Guide (R36.4.4)](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html).
 
+---
 
+## 🔧 Hardware Platform
 
-### L4T & JetPack Version
-```
-head -n 1 /etc/nv_tegra_release
-```
-<p data-start="427" data-end="498">→ Return: <code data-start="617" data-end="649"># R36 (release), REVISION: 4.4, GCID: 41062509, BOARD: generic, EABI: aarch64, DATE: Mon Jun 16 16:07:13 UTC 2025</code></p>
+| Component      | Specification                                        |
+| -------------- | ---------------------------------------------------- |
+| Device         | NVIDIA Jetson AGX Orin Developer Kit                 |
+| SoC            | NVIDIA Tegra Orin (8-core ARM v8.2 CPU + Ampere GPU) |
+| RAM            | 64GB LPDDR5                                          |
+| Storage        | 64GB eMMC + External NVMe SSD (optional)             |
+| GPIO Expansion | 40-Pin Header                                        |
+| Carrier Board  | P3737-0000                                           |
+| Power Mode     | 60W MAXN or custom                                   |
 
+---
 
+## 🧰 Software Stack & Versions
 
-### GPIO chip visibility
-```
-ls /dev/gpiochip*
-```
-<p data-start="427" data-end="498">→ Return: <code data-start="617" data-end="649">/dev/gpiochip0  /dev/gpiochip1  /dev/gpiochip2</code></p>
+| Component         | Version                     | Notes                                                                                          |
+| ----------------- | --------------------------- | ---------------------------------------------------------------------------------------------- |
+| Jetson Linux      | R36.4.4                     | [Jetson Linux Docs](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html) |
+| JetPack           | 6.0 DP                      | Installed via SDK Manager or CLI                                                               |
+| Ubuntu            | 20.04 LTS (arm64)           | NVIDIA's reference OS                                                                          |
+| Python            | 3.8+ (system default)       | venv supported                                                                                 |
+| Jetson.GPIO       | 2.1.1                       | [JetsonHacks GPIO Patch](https://github.com/JetsonHacks/jetson-agx-orin-gpio-patch) applied    |
+| gpiod             | 2.3.0                       | For libgpiod v2 API support                                                                    |
+| Pyserial          | latest                      | For RS485 control of MKS Servo57C                                                              |
+| Minicom           | latest                      | For serial diagnostics                                                                         |
+| Docker (optional) | 24.x                        | For isolated test environments                                                                 |
+| Git               | latest                      | For version control                                                                            |
+| OpenCV            | 4.x                         | Required for camera and image capture                                                          |
+| Pygame            | 2.x                         | (Optional) Used in debug UIs                                                                   |
+| Typer             | CLI tooling for Python apps |                                                                                                |
 
-```
-gpiodetect
-```
-<p data-start="427" data-end="498">→ Return: <code data-start="617" data-end="649">
-gpiochip0 [tegra234-gpio] (164 lines)
-gpiochip1 [tegra234-gpio-aon] (32 lines)
-gpiochip2 [ftdi-cbus] (4 lines)</code></p>
+---
 
-##
+## 🧱 Jetson System Initialization (From Baseline)
 
-## Install Jetson.GPIO
-### Create a Virtual Environment
-<p><strong>Navigate to your project directory</strong> (or create a new one):</p>
+```bash
+# Update & Install Basic Tools
+sudo apt update && sudo apt upgrade -y
+sudo apt install -y python3-pip python3-venv git gpiod libgpiod-dev minicom screen curl wget build-essential
 
-```
-cd /path/to/your/project
-```
-<p><strong>Create the virtual environment</strong> by running:</p>
-
-```
-python3 -m venv venv
-```
-<p>NOTE: This command creates a directory named <code class="qlv4I7skMF6Meluz0u8c wZ4JdaHxSAhGy1HoNVja _dJ357tkKXSh_Sup5xdW">venv</code> in your project folder, containing the virtual environment.</p>
-
-<p>To activate the virtual environment, use the following command:</p>
-
-```
-source venv/bin/activate
+# Set up Python Virtual Environment (optional but recommended)
+python3 -m venv ~/venv
+source ~/venv/bin/activate
+pip install --upgrade pip
 ```
 
-<p>NOTE: After activation, your terminal prompt will change to indicate that you are now working within the virtual environment.</p>
+### Flashing Jetson with JetPack 6.0 DP
 
-### Install Jetson.GPIO (NVIDIA’s Package)
-```
-sudo pip3 install Jetson.GPIO
-```
-Verify:
-```
-python3 -c "import Jetson.GPIO as GPIO; print(GPIO.VERSION)"
-```
-##
+Refer to official SDK Manager or CLI method:
+📖 [Flashing Guide](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/flash_software.html)
 
-### Final Steps
-<p data-start="1033" data-end="1072"><strong data-start="1033" data-end="1071">Confirm you’re in the <code data-start="1057" data-end="1063">gpio</code> group</strong>:</p>
+---
 
-```
-groups
-```
-<p>NOTE: If you do not see gpio listed then using the following two commands to add user permissions</p>
+## ⚙️ GPIO Setup (Bidirectional Patch for Pin 7)
 
-<p data-start="1096" data-end="1118"><strong data-start="1096" data-end="1117">(If not yet done)</strong>:</p>
+1. **Install Jetson.GPIO**:
 
-```
-sudo groupadd -f -r gpio
-```
-```
-sudo usermod -a -G gpio $USER
+```bash
+pip install Jetson.GPIO
 ```
 
-<p data-start="1190" data-end="1210"><strong data-start="1190" data-end="1209">Copy udev rules</strong>:</p>
+2. **Apply GPIO Patch**:
 
-```
-sudo cp /usr/local/lib/python3.10/dist-packages/Jetson/GPIO/99-gpio.rules /etc/udev/rules.d/
-```
-```
-sudo udevadm control --reload-rules && sudo udevadm trigger
+```bash
+git clone https://github.com/JetsonHacks/jetson-agx-orin-gpio-patch.git
+cd jetson-agx-orin-gpio-patch
+./install.sh  # Review before running
 ```
 
-<p data-start="1380" data-end="1391"><strong data-start="1380" data-end="1390">Reboot</strong>:</p>
+3. **Enable Pin 7 as Bidirectional**:
+   Create and compile a custom overlay (example `.dts` provided in repo).
 
+4. **Deploy .dtbo to `/boot/firmware/`** and update `/boot/extlinux/extlinux.conf`:
+
+```bash
+sudo cp pin7_overlay.dtbo /boot/firmware/
+sudo nano /boot/extlinux/extlinux.conf
+# Add to FDT entry or overlays
 ```
+
+5. **Reboot and verify**:
+
+```bash
 sudo reboot
+sudo cat /proc/device-tree/overlays/
 ```
+
+---
+
+## 🦪 System Diagnostics
+
+| Tool                                 | Usage                                                                 |
+| ------------------------------------ | --------------------------------------------------------------------- |
+| `dmesg`                              | Kernel messages                                                       |
+| `ls /dev/gpiochip*`                  | Detect gpiod chips                                                    |
+| `gpiodetect` / `gpioset` / `gpioget` | Use libgpiod commands                                                 |
+| `minicom -D /dev/ttyUSB0`            | Serial debug with MKS drivers                                         |
+| `i2cdetect -y 1`                     | Check for I2C peripherals                                             |
+| `sudo tegrastats`                    | Monitor performance/temps                                             |
+| `jtop`                               | GUI-based telemetry monitor (install with `pip install jetson-stats`) |
+
+---
+
+## 🔀 Maintenance Tasks
+
+```bash
+# Check JetPack Version
+dpkg-query --show nvidia-jetpack
+
+# Check Jetson Model & Specs
+sudo dmidecode -t system
+
+# Clean up disk space
+sudo apt autoremove -y
+sudo apt clean
+```
+
+---
+
+## 📌 References
+
+* 📚 [Jetson Linux Developer Guide R36.4.4](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/index.html)
+* 🧰 [Jetson AGX Orin Hardware Overview](https://developer.nvidia.com/embedded/jetson-agx-orin-devkit)
+* 🛠️ [JetsonHacks GPIO Patch](https://github.com/JetsonHacks/jetson-agx-orin-gpio-patch)
+* 🔧 [Jetson SDK Manager](https://developer.nvidia.com/jetson-sdk-manager)
+* ⚙️ [NVIDIA JetPack Archive](https://developer.nvidia.com/embedded/jetpack-archive)
