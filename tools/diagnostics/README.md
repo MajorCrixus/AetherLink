@@ -1,74 +1,65 @@
-# 🧪 GPIO Diagnostics Tool – `gpio_test.py`
+# 🧪 Diagnostics Tools (`tools/diagnostics/`)
 
-This script provides a basic GPIO diagnostic interface for the Jetson AGX Orin platform. It is part of the `tools/diagnostics/` directory for the AetherLink SATCOM project.
+This directory contains utilities designed to **verify GPIO functionality**, **validate pinmux behavior**, and **troubleshoot runtime issues** on the Jetson AGX Orin system.
 
-## 📄 Overview
-
-The `gpio_test.py` script helps verify pin configuration and state for GPIO pins exposed via the 40-pin header. It supports both the Jetson.GPIO library and the `gpiod` (libgpiod v2) interface and can be run as a CLI tool or imported as a Python module.
-
-## ⚙️ Features
-
-* Automatically detects whether `Jetson.GPIO` or `gpiod` is available
-* Allows setting pin direction and reading pin state
-* Minimal dependency footprint (uses `typer` for CLI)
-* Useful for testing overlays, limit switches, and GPIO behavior post-reboot
-
-## 🚀 Goals
-
-* Confirm Pin 7 (or others) is usable as an input/output
-* Validate pinmux overlay application
-* Provide a quick status check after system changes or reboots
-
-## 🧾 Usage
-
-Activate your project environment:
-
-```bash
-source ~/venv/bin/activate
-```
-
-Run the test script:
-
-```bash
-python gpio_test.py --pin 7 --direction in
-```
-
-List options:
-
-```bash
-python gpio_test.py --help
-```
-
-Expected output:
-
-```
-📍 Pin 7 configured as input
-🟢 Pin 7 state is: HIGH
-```
-
-## 🧱 Dependencies
-
-```bash
-pip install typer rich
-```
-
-Optional (if Jetson.GPIO is used):
-
-```bash
-pip install Jetson.GPIO
-```
-
-## 📁 Related Files
-
-* [`gpio_test.py`](./gpio_test.py): Main diagnostic script for testing GPIO pin functionality
-
-## 🔗 References
-
-* [Jetson.GPIO Documentation](https://github.com/NVIDIA/jetson-gpio)
-* [libgpiod](https://git.kernel.org/pub/scm/libs/libgpiod/libgpiod.git/about/)
-* [System Setup Guide](../../System%20Setup.md)
-* [Jetson Developer Guide – Configuring GPIO](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/HR/ConfiguringTheJetsonExpansionHeaders.html)
+These scripts aid in diagnosing whether pin configuration changes (e.g., overlays) are taking effect, and whether GPIO lines can be accessed as expected.
 
 ---
 
-✅ Be sure to verify overlays were applied and rebooted before running GPIO diagnostics.
+## 🧪 [`gpio_test.py`](./gpio_test.py)
+
+Performs basic input/output tests on Jetson header pins using both `Jetson.GPIO` and `gpiod` backends. Useful after overlay application or boot to ensure GPIO is functioning.
+
+### ✅ Features
+
+* Supports both `Jetson.GPIO` and `gpiod` libraries
+* Accepts CLI arguments for pin number and mode (input/output)
+* Optional pulse generation for output pins
+* Displays live pin readout for input mode
+* Detects GPIO errors and provides status output
+
+### 🎯 Goals
+
+* Verify whether overlays or pinmux changes have taken effect
+* Enable rapid testing of GPIO functionality on any Jetson header pin
+* Simplify diagnostics of input lines like limit switches
+
+### ⚙️ Usage
+
+```bash
+source ~/venv/bin/activate
+python3 gpio_test.py --mode input --pin 7 --library gpiod
+```
+
+> Use inside your Python virtual environment (if configured).
+
+### 📦 Dependencies
+
+* `gpiod` v2.3.0+
+* `Jetson.GPIO` (if selected as backend)
+* Python 3.8+
+* `argparse`, `time` (standard libraries)
+
+### 🛡️ Best Practices
+
+* Use `--mode input` to validate external switch circuits (e.g., reed limit switches)
+* Always test after a reboot to verify overlay persistence
+* Use the `--verbose` flag (if implemented) for detailed trace
+
+### 🔗 Related Documentation
+
+* [`system_setup.md`](../../system_setup.md#gpio)
+* [GPIO Setup Guide](../../hardware/docs/Jetson/gpio_setup.md)
+* [Jetson Linux Developer Guide - GPIO](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/HR/ConfiguringTheJetsonExpansionHeaders.html#configuring-gpio-pins)
+
+---
+
+## 🧩 Related Tools
+
+This directory may later include:
+
+* Serial line diagnostics (`uart_monitor.py`)
+* Overlay status checkers (`overlay_inspect.py`)
+* Power rail monitors (`power_diag.py`)
+
+When added, each tool should follow the same structure with README coverage.
