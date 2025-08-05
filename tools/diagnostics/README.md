@@ -83,7 +83,74 @@ python3 check_versions.py
 
 ---
 
-## 🧩 Related Tools
+## 🧪 [`overlay_inspect.py`](./overlay_inspect.py)
 
-This directory may later include:
-- Power rail monitors (`power_diag.py`)
+Inspects overlay application status on the Jetson AGX Orin by checking both the `/proc/device-tree/overlays` directory and `extlinux.conf` for references to loaded `.dtbo` overlays.
+
+### ✅ Features
+- Verifies if overlays (e.g., pin7 overlay) were loaded at boot
+- Scans for specific overlays like `pin7_overlay` (optional)
+- Parses boot configuration file to trace overlay setup
+- Graceful fallback with error handling if files are missing
+
+### 🎯 Goals
+- Help diagnose cases where expected GPIO behavior isn’t taking effect
+- Confirm overlay installation and bootloader integration
+- Assist users in debugging boot-time DTS misconfigurations
+
+### ⚙️ Usage
+```bash
+python3 overlay_inspect.py
+```
+> Run as a system-wide diagnostic tool after a reboot or DTS deployment.
+
+### 📦 Dependencies
+- Python 3.8+
+- `os`, `argparse`, `pathlib`, `re` (standard libraries)
+
+### 🛡️ Best Practices
+- Use after applying `.dtbo` files and rebooting
+- Pair with `gpio_test.py` to confirm pin function changes
+
+### 🔗 Related Documentation
+- [`system_setup.md`](../../system_setup.md#🛠️-apply-the-overlay)
+- [JetsonHacks Overlay Guide](https://jetsonhacks.com/2025/04/07/device-tree-overlays-on-jetson-scary-but-fun/)
+- [Jetson Linux Developer Guide - Device Tree](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/DTOverlays.html)
+
+---
+
+## 🧪 [`power_diag.py`](./power_diag.py)
+
+Monitors system power usage and key voltage rails using `tegrastats`, enabling real-time tracking of CPU, GPU, and DDR power draw.
+
+### ✅ Features
+- Uses `tegrastats` to extract per-rail power usage
+- Supports continuous monitoring with adjustable polling interval
+- Logs output to CSV (optional flag)
+- Displays average and peak power draw over runtime
+- System-wide (no virtual environment required)
+
+### 🎯 Goals
+- Detect power instability or overdraw from connected hardware (e.g. servos, SDRs)
+- Confirm healthy operation of system rails under various loads
+- Provide engineers with actionable power data during field tests
+
+### ⚙️ Usage
+```bash
+python3 power_diag.py --interval 2 --duration 60 --log power_log.csv
+```
+> Logs power draw every 2 seconds for 60 seconds and writes to `power_log.csv`
+
+### 📦 Dependencies
+- Python 3.8+
+- `subprocess`, `re`, `csv`, `time`, `datetime`, `argparse` (standard libraries)
+
+### 🛡️ Best Practices
+- Run during servo motion or SDR tuning phases to observe impact on power
+- Use log output to compare sessions and analyze long-term behavior
+
+### 🔗 Related Documentation
+- [`system_setup.md`](../../system_setup.md#power-and-thermal-considerations)
+- [Jetson Linux Developer Guide - `tegrastats`](https://docs.nvidia.com/jetson/archives/r36.4.4/DeveloperGuide/MonitoringResources.html#tegrastats)
+
+---
