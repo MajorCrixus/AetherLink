@@ -1,8 +1,10 @@
-www.relevanceai.com
+https://www.skool.com/learn-ai/about
+https://replit.com/
+https://relevanceai.com
 https://www.supabase.com/
-www.cirkitdesigner.com
-www.gitbook.com
+https://cirkitdesigner.com
+https://gitbook.com
 https://www.space-track.org/
-www.amsat.org/
+https://amsat.org/
 https://majorcrixus.retool.com/
 https://chat.genai.army.mil/dashboard
