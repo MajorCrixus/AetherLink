@@ -18,8 +18,7 @@ aetherlink/
 ├── hardware/                   # Hardware abstraction layer
 │   ├── gps/                   # GPS modules (M10-25Q, BU353N)
 │   ├── imu/                   # IMU modules (WT901C)
-│   ├── motors/                # Servo control (MKS Servo57D)
-│   └── database/              # Hardware state storage
+│   └── motors/                # Servo control (MKS Servo57D)
 ├── webapp/                    # Main web application
 │   ├── backend/               # FastAPI backend
 │   └── frontend/              # React + Vite frontend
