@@ -1,0 +1,1 @@
+cmd_/home/charlesyeh522/PL2303G_Linux_Driver_v1.0.5/4.18_OK/pl2303.ko := ld -r -m elf_x86_64  -z max-page-size=0x200000 -T ./scripts/module-common.lds  --build-id  -o /home/charlesyeh522/PL2303G_Linux_Driver_v1.0.5/4.18_OK/pl2303.ko /home/charlesyeh522/PL2303G_Linux_Driver_v1.0.5/4.18_OK/pl2303.o /home/charlesyeh522/PL2303G_Linux_Driver_v1.0.5/4.18_OK/pl2303.mod.o ;  true

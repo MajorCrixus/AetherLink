@@ -707,7 +707,7 @@ async def console_home(
             async with telemetry_service.hardware_manager._bus_lock:
                 if request.method == "limit":
                     # Configure limit-based homing parameters (function 0x90)
-                    from hardware.motors.mks_servo57d_lib import HomeParams
+                    from hardware.servo_motors.code_library.mks_servo57d_lib import HomeParams
 
                     hm_trig = 1 if request.trigger == "high" else 0
                     hm_dir = 1 if request.direction == "ccw" else 0

@@ -10,10 +10,9 @@ from ..models.telemetry import (
     TelemetryData, GPSFix, IMU, AxisState, ServoState,
     LimitState, SystemState
 )
-from tools.config.device_config import get_port
-from hardware.gps.bu353n_gps import BU353NGPS
-from hardware.imu.wt901c import WT901C, PID, Angles, Gyro, Accel
-from hardware.motors.servo57d_api import MKSServo57D
+from hardware.gps.code_library.bu353n_gps import BU353NGPS
+from hardware.imu.code_library.wt901c import WT901C, PID, Angles, Gyro, Accel
+from hardware.servo_motors.code_library.servo57d_api import MKSServo57D
 from .tracking_controller import TrackingController
 
 logger = logging.getLogger(__name__)
@@ -114,7 +113,7 @@ class HardwareManager:
 
     async def _init_gps(self):
         try:
-            gps_port = get_port("gps", settings.GPS_PORT)
+            gps_port = settings.GPS_PORT
             logger.info(f"Initializing GPS on {gps_port}")
             self.gps = BU353NGPS(port=gps_port, baud=4800)
 
@@ -137,7 +136,7 @@ class HardwareManager:
 
     async def _init_imu(self):
         try:
-            imu_port = get_port("imu", settings.IMU_PORT)
+            imu_port = settings.IMU_PORT
             logger.info(f"Initializing IMU on {imu_port}")
             baud_rates = [9600, 115200]
             for baud in baud_rates:
@@ -185,7 +184,7 @@ class HardwareManager:
 
     async def _init_servos(self):
         try:
-            rs485_port = get_port("rs485", settings.RS485_PORT)
+            rs485_port = settings.RS485_PORT
             logger.info(f"Initializing servos on {rs485_port}")
             # ONE bus instance; address selects which servo
             self.servo_bus = MKSServo57D(port=rs485_port, baud=38400)

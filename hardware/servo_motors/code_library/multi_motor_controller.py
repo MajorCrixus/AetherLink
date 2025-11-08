@@ -9,7 +9,7 @@ Convenience wrapper for controlling three MKS servo motors on shared RS485 bus:
 - Cross (Servo42D): Address 0x03
 
 Usage:
-    from back_end.hardware.motors.multi_motor_controller import MotorController
+    from hardware.servo_motors.code_library.multi_motor_controller import MotorController
 
     mc = MotorController(port="/dev/rs485")
     mc.enable_all()

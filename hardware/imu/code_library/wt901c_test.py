@@ -6,76 +6,33 @@ Usage:
     python wt901c_test.py                           # Continuous display (all sensors)
     python wt901c_test.py --once                    # Single reading with details
     python wt901c_test.py --angles                  # Angles only (continuous)
-    python wt901c_test.py --heading-only            # Headings only (continuous)
     python wt901c_test.py --calibrate-accel 5       # Calibrate accelerometer (5 seconds)
     python wt901c_test.py --calibrate-mag 20        # Calibrate magnetometer (20 seconds)
     python wt901c_test.py --calibrate-full          # Full calibration sequence
     python wt901c_test.py --zero-yaw                # Zero yaw angle
     python wt901c_test.py --configure               # Interactive configuration wizard
     python wt901c_test.py --json                    # JSON output (continuous)
-    python wt901c_test.py --declination 3.1         # Apply local magnetic declination (deg)
 """
 
 import argparse
 import time
 import sys
 import json
-import math
 from pathlib import Path
 from typing import Optional
 
-# Add parent directory to path for imports
-sys.path.insert(0, str(Path(__file__).parent.parent.parent))
-
-from back_end.hardware.imu.wt901c import (
+# Import from same code_library directory (relative import)
+from wt901c import (
     WT901C, PID,
     Accel, Gyro, Angles, Mag, Quaternion, PressureAlt, GPSData, GPSAccuracy, PortStatus,
     AXIS_DIR_HORIZONTAL, AXIS_DIR_VERTICAL
 )
 
-# ----------------------------- Heading helpers -----------------------------
 
-def _norm_deg(a: float) -> float:
-    a %= 360.0
-    return a if a >= 0 else a + 360.0
-
-def compute_heading_deg_from(accel: Accel, mag: Mag) -> float:
-    """
-    Tilt-compensated magnetic heading in degrees (0..360).
-    Uses accel (to estimate roll/pitch) and raw mag counts.
-    """
-    mx, my, mz = float(mag.mx), float(mag.my), float(mag.mz)
-    ax, ay, az = float(accel.ax_g), float(accel.ay_g), float(accel.az_g)
-
-    # Normalize accelerometer (gravity vector)
-    g = math.sqrt(ax*ax + ay*ay + az*az) or 1.0
-    axn, ayn, azn = ax / g, ay / g, az / g
-
-    # roll, pitch from accel
-    roll  = math.atan2(ayn, azn)
-    pitch = math.atan2(-axn, math.sqrt(ayn*ayn + azn*azn))
-
-    # Tilt compensation of mag vector
-    mx2 = mx * math.cos(pitch) + mz * math.sin(pitch)
-    my2 = (mx * math.sin(roll) * math.sin(pitch)
-           + my * math.cos(roll)
-           - mz * math.sin(roll) * math.cos(pitch))
-
-    # Heading: 0° = x+, increases clockwise
-    heading = math.degrees(math.atan2(-my2, mx2))
-    return _norm_deg(heading)
-
-def apply_declination(mag_heading: Optional[float], declination_deg: Optional[float]) -> Optional[float]:
-    if mag_heading is None or declination_deg is None:
-        return None
-    return _norm_deg(mag_heading + declination_deg)
-
-# ------------------------------- Displays ----------------------------------
-
-def display_continuous(imu: WT901C, interval: float = 0.1, declination: Optional[float] = None):
+def display_continuous(imu: WT901C, interval: float = 0.1):
     """Continuously display all sensor data"""
     print("WT901C-TTL IMU Monitor (Ctrl+C to stop)")
-    print("=" * 120)
+    print("=" * 100)
 
     try:
         while True:
@@ -98,15 +55,7 @@ def display_continuous(imu: WT901C, interval: float = 0.1, declination: Optional
                 parts.append(f"Gyro:{gyro.gx_dps:6.1f},{gyro.gy_dps:6.1f},{gyro.gz_dps:6.1f}°/s")
 
             if mag:
-                parts.append(f"Mag:{mag.mx:6d},{mag.my:6d},{mag.mz:6d}")
-
-            # Heading (tilt-compensated)
-            if accel and mag:
-                hmag = compute_heading_deg_from(accel, mag)
-                parts.append(f"Hdg:{hmag:6.1f}°")
-                if declination is not None:
-                    htrue = apply_declination(hmag, declination)
-                    parts.append(f"True:{htrue:6.1f}°")
+                parts.append(f"Mag:{mag.mx:5d},{mag.my:5d},{mag.mz:5d}")
 
             if parts:
                 print(f"\r{' | '.join(parts)}", end="", flush=True)
@@ -118,29 +67,6 @@ def display_continuous(imu: WT901C, interval: float = 0.1, declination: Optional
     except KeyboardInterrupt:
         print("\n\nStopped.")
 
-def display_heading_only(imu: WT901C, interval: float = 0.05, declination: Optional[float] = None):
-    """Continuous headings only (fast)"""
-    print("WT901C Heading (Ctrl+C to stop)")
-    print("=" * 60)
-
-    try:
-        while True:
-            accel = imu.last(PID.ACC)
-            mag = imu.last(PID.MAG)
-
-            if accel and mag:
-                hmag = compute_heading_deg_from(accel, mag)
-                line = f"\rMagnetic: {hmag:7.2f}°"
-                if declination is not None:
-                    htrue = apply_declination(hmag, declination)
-                    line += f"   True: {htrue:7.2f}°"
-                print(line, end="", flush=True)
-            else:
-                print("\rWaiting for accel+mag...", end="", flush=True)
-
-            time.sleep(interval)
-    except KeyboardInterrupt:
-        print("\n\nStopped.")
 
 def display_angles_only(imu: WT901C, interval: float = 0.05):
     """Display angles only (high refresh rate)"""
@@ -164,7 +90,8 @@ def display_angles_only(imu: WT901C, interval: float = 0.05):
     except KeyboardInterrupt:
         print("\n\nStopped.")
 
-def display_once(imu: WT901C, declination: Optional[float] = None):
+
+def display_once(imu: WT901C):
     """Display detailed single reading"""
     print("\nWT901C-TTL IMU Status")
     print("=" * 80)
@@ -206,20 +133,12 @@ def display_once(imu: WT901C, declination: Optional[float] = None):
         mag_q = (quat.q0**2 + quat.q1**2 + quat.q2**2 + quat.q3**2)**0.5
         print(f"  Magnitude: {mag_q:.4f} (should be ~1.0)")
 
-    # Magnetometer + heading
-    accel = imu.last(PID.ACC)
-    mag = imu.last(PID.MAG)
-    if mag:
+    # Magnetometer
+    if mag := imu.last(PID.MAG):
         print(f"\n🧲 Magnetometer:")
         print(f"  X: {mag.mx:6d} LSB")
         print(f"  Y: {mag.my:6d} LSB")
         print(f"  Z: {mag.mz:6d} LSB")
-        if accel:
-            hmag = compute_heading_deg_from(accel, mag)
-            print(f"  Tilt-compensated magnetic heading: {hmag:7.2f}°")
-            if declination is not None:
-                htrue = apply_declination(hmag, declination)
-                print(f"  True heading (declination {declination:+.2f}°): {htrue:7.2f}°")
 
     # Barometer (if available)
     if baro := imu.last(PID.BARO):
@@ -253,7 +172,8 @@ def display_once(imu: WT901C, declination: Optional[float] = None):
 
     print("=" * 80)
 
-def display_json(imu: WT901C, interval: float = 0.1, declination: Optional[float] = None):
+
+def display_json(imu: WT901C, interval: float = 0.1):
     """Output data as JSON (continuous)"""
     try:
         while True:
@@ -268,15 +188,8 @@ def display_json(imu: WT901C, interval: float = 0.1, declination: Optional[float
             if angles := imu.last(PID.ANG):
                 data["angles"] = {"roll": angles.roll_deg, "pitch": angles.pitch_deg, "yaw": angles.yaw_deg}
 
-            accel = imu.last(PID.ACC)
-            mag = imu.last(PID.MAG)
-            if mag:
+            if mag := imu.last(PID.MAG):
                 data["mag"] = {"x": mag.mx, "y": mag.my, "z": mag.mz}
-                if accel:
-                    hmag = compute_heading_deg_from(accel, mag)
-                    data["heading_mag_deg"] = hmag
-                    if declination is not None:
-                        data["heading_true_deg"] = apply_declination(hmag, declination)
 
             if quat := imu.last(PID.QUAT):
                 data["quaternion"] = {"q0": quat.q0, "q1": quat.q1, "q2": quat.q2, "q3": quat.q3}
@@ -289,7 +202,6 @@ def display_json(imu: WT901C, interval: float = 0.1, declination: Optional[float
     except KeyboardInterrupt:
         pass
 
-# ------------------------------- Calibration -------------------------------
 
 def calibrate_accelerometer(imu: WT901C, duration: int):
     """Calibrate accelerometer"""
@@ -302,6 +214,7 @@ def calibrate_accelerometer(imu: WT901C, duration: int):
     imu.calibrate_with_config(accel=True, duration=duration)
     print("\n✅ Accelerometer calibration complete!")
 
+
 def calibrate_magnetometer(imu: WT901C, duration: int):
     """Calibrate magnetometer"""
     print("\n" + "=" * 80)
@@ -313,6 +226,7 @@ def calibrate_magnetometer(imu: WT901C, duration: int):
 
     imu.calibrate_with_config(mag=True, duration=duration)
     print("\n✅ Magnetometer calibration complete!")
+
 
 def calibrate_full(imu: WT901C):
     """Full calibration sequence"""
@@ -328,7 +242,7 @@ def calibrate_full(imu: WT901C):
     imu.unlock()
     imu.start_accel_calibration()
     print("Calibrating", end="", flush=True)
-    for _ in range(5):
+    for i in range(5):
         time.sleep(1)
         print(".", end="", flush=True)
     imu.stop_accel_calibration()
@@ -341,7 +255,7 @@ def calibrate_full(imu: WT901C):
 
     imu.start_mag_calibration()
     print("Calibrating (rotate now)", end="", flush=True)
-    for _ in range(20):
+    for i in range(20):
         time.sleep(1)
         print(".", end="", flush=True)
     imu.stop_mag_calibration()
@@ -363,6 +277,7 @@ def calibrate_full(imu: WT901C):
     print("\n✅ Full calibration complete!")
     print("=" * 80)
 
+
 def zero_yaw(imu: WT901C):
     """Zero yaw angle"""
     print("\n" + "=" * 80)
@@ -382,6 +297,7 @@ def zero_yaw(imu: WT901C):
     time.sleep(0.5)
     if angles := imu.last(PID.ANG):
         print(f"\nNew yaw: {angles.yaw_deg:.1f}° (should be close to 0°)")
+
 
 def interactive_config(imu: WT901C):
     """Interactive configuration wizard"""
@@ -436,7 +352,6 @@ def interactive_config(imu: WT901C):
     print("\n✅ Configuration applied and saved!")
     print("=" * 80)
 
-# ----------------------------------- Main ----------------------------------
 
 def main():
     parser = argparse.ArgumentParser(
@@ -447,7 +362,6 @@ Examples:
   %(prog)s                             # Continuous display (all sensors)
   %(prog)s --once                      # Single reading with details
   %(prog)s --angles                    # Angles only (high refresh)
-  %(prog)s --heading-only              # Headings only (fast)
   %(prog)s --calibrate-accel 5         # Calibrate accelerometer (5s)
   %(prog)s --calibrate-mag 20          # Calibrate magnetometer (20s)
   %(prog)s --calibrate-full            # Full calibration sequence
@@ -467,8 +381,6 @@ Examples:
                        help="Display single reading with details")
     parser.add_argument("--angles", action="store_true",
                        help="Display angles only (continuous)")
-    parser.add_argument("--heading-only", action="store_true",
-                       help="Display magnetic/true heading only (continuous)")
     parser.add_argument("--json", action="store_true",
                        help="Output JSON (continuous)")
 
@@ -488,9 +400,6 @@ Examples:
 
     parser.add_argument("--interval", type=float, default=0.1,
                        help="Update interval in seconds (default: 0.1)")
-
-    parser.add_argument("--declination", type=float, default=None,
-                       help="Magnetic declination in degrees (adds true heading)")
 
     args = parser.parse_args()
 
@@ -516,15 +425,13 @@ Examples:
         elif args.configure:
             interactive_config(imu)
         elif args.json:
-            display_json(imu, args.interval, args.declination)
+            display_json(imu, args.interval)
         elif args.once:
-            display_once(imu, args.declination)
+            display_once(imu)
         elif args.angles:
-            display_angles_only(imu, )
-        elif args.heading_only:
-            display_heading_only(imu, max(0.02, args.interval), args.declination)
+            display_angles_only(imu)
         else:
-            display_continuous(imu, args.interval, args.declination)
+            display_continuous(imu, args.interval)
 
     except KeyboardInterrupt:
         print("\n\nInterrupted by user.")

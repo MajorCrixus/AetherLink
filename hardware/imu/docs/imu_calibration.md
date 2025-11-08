@@ -32,7 +32,5 @@
 ## Instructions
 After each movement, run:
 ```bash
-python3 -c "from hardware.imu.wt901c import WT901C; import time; imu=WT901C('/dev/imu',9600); imu.start(); time.sleep(2); angles=imu.last(0x53); print(f'Roll: {angles.roll_deg:.2f}° Pitch: {angles.pitch_deg:.2f}° Yaw: {angles.yaw_deg:.2f}°')"
+python3 -c "from hardware.imu.code_library.wt901c import WT901C; import time; imu=WT901C('/dev/imu',9600); imu.start(); time.sleep(2); angles=imu.last(0x53); print(f'Roll: {angles.roll_deg:.2f}° Pitch: {angles.pitch_deg:.2f}° Yaw: {angles.yaw_deg:.2f}°')"
 ```
-
-Then tell me the new values.
