@@ -1,0 +1,136 @@
+// Prisma Schema for Satellite Catalog Database
+// Corresponds to schema.sql
+
+generator client {
+  provider = "prisma-client-js"
+  binaryTargets = ["native", "linux-arm64-openssl-3.0.x"]
+  previewFeatures = []
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("POSTGRES_URL")
+}
+
+// =============================================================================
+// SATELLITE MODEL
+// =============================================================================
+model Satellite {
+  id              Int       @id @default(autoincrement())
+  noradId         Int       @unique @map("norad_id")
+  intlDesig       String?   @map("intl_desig")
+  name            String
+  owner           String?
+  launchDate      DateTime? @map("launch_date") @db.Date
+  orbitClass      String?   @map("orbit_class")
+  periodMinutes   Float?    @map("period_minutes")
+  inclinationDeg  Float?    @map("inclination_deg")
+  apogeeKm        Float?    @map("apogee_km")
+  perigeeKm       Float?    @map("perigee_km")
+  objectType      String?   @map("object_type")
+  rcsSize         String?   @map("rcs_size")
+  decayDate       DateTime? @map("decay_date") @db.Date
+  source          String    @default("space-track")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
+
+  // Relations
+  tles         Tle[]
+  transmitters Transmitter[]
+  tags         SatelliteTag[]
+
+  @@index([noradId])
+  @@index([owner])
+  @@index([orbitClass])
+  @@index([launchDate])
+  @@index([objectType])
+  @@map("satellite")
+}
+
+// =============================================================================
+// TLE MODEL
+// =============================================================================
+model Tle {
+  id            Int      @id @default(autoincrement())
+  noradId       Int      @map("norad_id")
+  line1         String
+  line2         String
+  epoch         DateTime
+  elementSetNo  Int?     @map("element_set_no")
+  source        String   @default("space-track")
+  collectedAt   DateTime @default(now()) @map("collected_at")
+
+  // Relations
+  satellite Satellite @relation(fields: [noradId], references: [noradId], onDelete: Cascade)
+
+  @@index([noradId])
+  @@index([epoch(sort: Desc)])
+  @@index([noradId, epoch(sort: Desc)])
+  @@map("tle")
+}
+
+// =============================================================================
+// TRANSMITTER MODEL
+// =============================================================================
+model Transmitter {
+  id              Int      @id @default(autoincrement())
+  noradId         Int      @map("norad_id")
+  satnogsUuid     String?  @unique @map("satnogs_uuid")
+  downlinkFreqHz  BigInt?  @map("downlink_freq_hz")
+  downlinkBand    String?  @map("downlink_band")
+  uplinkFreqHz    BigInt?  @map("uplink_freq_hz")
+  uplinkBand      String?  @map("uplink_band")
+  mode            String?
+  direction       String?
+  status          String?
+  service         String?
+  raw             Json?
+  source          String   @default("satnogs")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  satellite Satellite @relation(fields: [noradId], references: [noradId], onDelete: Cascade)
+
+  @@index([noradId])
+  @@index([downlinkBand])
+  @@index([uplinkBand])
+  @@index([status])
+  @@index([service])
+  @@index([satnogsUuid])
+  @@map("transmitter")
+}
+
+// =============================================================================
+// SATELLITE_TAG MODEL
+// =============================================================================
+model SatelliteTag {
+  id         Int      @id @default(autoincrement())
+  noradId    Int      @map("norad_id")
+  tagType    String   @map("tag_type")
+  tagValue   String   @map("tag_value")
+  confidence Float    @default(1.0)
+  source     String   @default("auto")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  // Relations
+  satellite Satellite @relation(fields: [noradId], references: [noradId], onDelete: Cascade)
+
+  @@unique([noradId, tagType, tagValue])
+  @@index([noradId])
+  @@index([tagType, tagValue])
+  @@map("satellite_tag")
+}
+
+// =============================================================================
+// INGEST_STATE MODEL
+// =============================================================================
+model IngestState {
+  id                    Int      @id @default(autoincrement())
+  source                String   @unique
+  lastSuccessfulFetchAt DateTime @map("last_successful_fetch_at")
+  lastFetchCount        Int      @default(0) @map("last_fetch_count")
+  lastError             String?  @map("last_error")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  @@map("ingest_state")
+}

@@ -1,0 +1,20 @@
+# Sudoers configuration for AetherLink webapp
+# Allows user 'major' to manage webapp processes without password
+#
+# Installation:
+#   sudo visudo -c -f /home/major/aetherlink/aetherlink-sudoers
+#   sudo cp /home/major/aetherlink/aetherlink-sudoers /etc/sudoers.d/aetherlink
+#   sudo chmod 440 /etc/sudoers.d/aetherlink
+
+# Allow killing processes (for stopping backend/frontend)
+major ALL=(ALL) NOPASSWD: /bin/kill
+major ALL=(ALL) NOPASSWD: /usr/bin/killall
+
+# Allow firewall configuration for webapp ports
+major ALL=(ALL) NOPASSWD: /usr/sbin/ufw allow 9000/tcp
+major ALL=(ALL) NOPASSWD: /usr/sbin/ufw allow 3001/tcp
+major ALL=(ALL) NOPASSWD: /usr/sbin/ufw status
+
+# Allow serial port access (if needed for hardware)
+major ALL=(ALL) NOPASSWD: /bin/chmod a+rw /dev/ttyUSB*
+major ALL=(ALL) NOPASSWD: /bin/chmod a+rw /dev/ttyACM*

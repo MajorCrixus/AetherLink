@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en" class="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/svg+xml" href="/aetherlink-icon.svg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AetherLink SATCOM Control</title>
+    <style>
+      /* CSS custom properties for the color system */
+      :root {
+        /* Light theme */
+        --background: 0 0% 100%;
+        --foreground: 222.2 84% 4.9%;
+        --primary: 221.2 83.2% 53.3%;
+        --primary-foreground: 210 40% 98%;
+        --secondary: 210 40% 96%;
+        --secondary-foreground: 222.2 84% 4.9%;
+        --muted: 210 40% 96%;
+        --muted-foreground: 215.4 16.3% 46.9%;
+        --accent: 210 40% 96%;
+        --accent-foreground: 222.2 84% 4.9%;
+        --success: 142.1 76.2% 36.3%;
+        --warning: 45.4 93.4% 47.5%;
+        --error: 0 84.2% 60.2%;
+        --info: 221.2 83.2% 53.3%;
+      }
+
+      .dark {
+        /* Dark theme - INAV-inspired */
+        --background: 222.2 84% 4.9%;
+        --foreground: 210 40% 98%;
+        --primary: 217.2 91.2% 59.8%;
+        --primary-foreground: 222.2 84% 4.9%;
+        --secondary: 217.2 32.6% 17.5%;
+        --secondary-foreground: 210 40% 98%;
+        --muted: 217.2 32.6% 17.5%;
+        --muted-foreground: 215 20.2% 65.1%;
+        --accent: 217.2 32.6% 17.5%;
+        --accent-foreground: 210 40% 98%;
+        --success: 142.1 70.6% 45.3%;
+        --warning: 45.4 93.4% 47.5%;
+        --error: 0 72.2% 50.6%;
+        --info: 217.2 91.2% 59.8%;
+      }
+
+      /* Base styles */
+      * {
+        border-color: hsl(var(--border));
+      }
+
+      body {
+        background-color: hsl(var(--background));
+        color: hsl(var(--foreground));
+        font-family: system-ui, -apple-system, sans-serif;
+        margin: 0;
+        padding: 0;
+        overflow: hidden;
+      }
+
+      /* Loading screen */
+      #loading {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: hsl(var(--background));
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+      }
+
+      .loading-spinner {
+        width: 40px;
+        height: 40px;
+        border: 3px solid hsl(var(--muted));
+        border-top: 3px solid hsl(var(--primary));
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+      }
+
+      @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+      }
+
+      /* Scrollbar styling */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      ::-webkit-scrollbar-track {
+        background: hsl(var(--muted));
+      }
+
+      ::-webkit-scrollbar-thumb {
+        background: hsl(var(--muted-foreground));
+        border-radius: 4px;
+      }
+
+      ::-webkit-scrollbar-thumb:hover {
+        background: hsl(var(--primary));
+      }
+    </style>
+  </head>
+  <body>
+    <div id="root">
+      <div id="loading">
+        <div>
+          <div class="loading-spinner"></div>
+          <div style="margin-top: 16px; text-align: center;">
+            Loading AetherLink...
+          </div>
+        </div>
+      </div>
+    </div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

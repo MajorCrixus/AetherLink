@@ -1,0 +1,51 @@
+# =============================================================================
+# AetherLink Satellite Catalog Backend - Git Ignore
+# =============================================================================
+
+# Environment variables (NEVER COMMIT CREDENTIALS!)
+.env
+.env.local
+.env.*.local
+
+# Node.js
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# Build output
+dist/
+build/
+*.tsbuildinfo
+
+# Prisma
+prisma/migrations/
+.prisma/
+
+# Logs
+logs/
+*.log
+*.log.*
+
+# OS
+.DS_Store
+Thumbs.db
+*.swp
+*.swo
+*~
+
+# IDE
+.vscode/
+.idea/
+*.iml
+.fleet/
+
+# Testing
+coverage/
+.nyc_output/
+
+# Temporary files
+tmp/
+temp/
+*.tmp

@@ -1,0 +1,384 @@
+@import 'tailwindcss/base';
+@import 'tailwindcss/components';
+@import 'tailwindcss/utilities';
+
+/* CSS Variables */
+:root {
+  --background: 210 40% 6%;
+  --foreground: 210 40% 98%;
+  --border: 210 40% 20%;
+  --input: 210 40% 18%;
+  --ring: 210 40% 60%;
+  --primary: 210 40% 50%;
+  --primary-foreground: 210 40% 98%;
+  --secondary: 210 40% 12%;
+  --secondary-foreground: 210 40% 98%;
+  --muted: 210 40% 15%;
+  --muted-foreground: 210 40% 65%;
+  --accent: 210 40% 16%;
+  --accent-foreground: 210 40% 98%;
+}
+
+/* Base layer styles */
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply bg-background text-foreground font-sans;
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-semibold;
+  }
+
+  /* Scrollbar styling */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: hsl(var(--muted-foreground)) hsl(var(--muted));
+  }
+
+  *::-webkit-scrollbar {
+    @apply w-2;
+  }
+
+  *::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  *::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground rounded;
+  }
+
+  *::-webkit-scrollbar-thumb:hover {
+    @apply bg-primary;
+  }
+}
+
+/* Component layer styles */
+@layer components {
+  /* INAV-style panels */
+  .panel {
+    @apply bg-secondary/50 border border-secondary rounded-lg backdrop-blur-sm;
+  }
+
+  .panel-header {
+    @apply px-4 py-2 border-b border-secondary bg-secondary/30 rounded-t-lg;
+  }
+
+  .panel-content {
+    @apply p-4;
+  }
+
+  /* Status indicators */
+  .status-indicator {
+    @apply inline-flex items-center gap-1 px-2 py-1 rounded text-xs font-medium;
+  }
+
+  .status-indicator.ok {
+    @apply bg-health-ok/20 text-health-ok border border-health-ok/30;
+  }
+
+  .status-indicator.warn {
+    @apply bg-health-warn/20 text-health-warn border border-health-warn/30 animate-pulse-glow;
+  }
+
+  .status-indicator.error {
+    @apply bg-health-error/20 text-health-error border border-health-error/30 animate-pulse-glow;
+  }
+
+  .status-indicator.off {
+    @apply bg-health-off/20 text-health-off border border-health-off/30;
+  }
+
+  .status-indicator.init {
+    @apply bg-health-init/20 text-health-init border border-health-init/30 animate-pulse;
+  }
+
+  .status-indicator.sim {
+    @apply bg-health-sim/20 text-health-sim border border-health-sim/30;
+  }
+
+  /* Button styles */
+  .btn {
+    @apply inline-flex items-center justify-center px-4 py-2 text-sm font-medium rounded-md transition-colors;
+    @apply focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+    @apply disabled:pointer-events-none disabled:opacity-50;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/80;
+  }
+
+  .btn-danger {
+    @apply bg-health-error text-white hover:bg-health-error/90;
+  }
+
+  .btn-ghost {
+    @apply hover:bg-accent hover:text-accent-foreground;
+  }
+
+  /* Input styles */
+  .input {
+    @apply flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm;
+    @apply ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium;
+    @apply placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2;
+    @apply focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50;
+  }
+
+  /* Gauge styles */
+  .gauge {
+    @apply relative inline-flex items-center justify-center;
+  }
+
+  .gauge-track {
+    @apply stroke-muted;
+  }
+
+  .gauge-progress {
+    @apply stroke-primary transition-all duration-300;
+  }
+
+  /* HUD styles */
+  .hud-widget {
+    @apply bg-background/80 border border-primary/30 rounded-lg backdrop-blur-sm;
+    @apply shadow-lg shadow-primary/10;
+  }
+
+  .hud-widget-header {
+    @apply px-3 py-2 border-b border-primary/20 bg-primary/5 rounded-t-lg;
+    pointer-events: auto !important;
+  }
+
+  .hud-widget-content {
+    @apply p-3;
+    pointer-events: auto !important;
+  }
+
+  /* Terminal styles */
+  .terminal {
+    @apply bg-black/90 text-green-400 font-mono rounded border border-green-400/30;
+    @apply shadow-lg shadow-green-400/10;
+  }
+
+  .terminal-header {
+    @apply px-3 py-2 border-b border-green-400/20 bg-green-400/5 rounded-t;
+  }
+
+  /* Glow effects */
+  .glow {
+    @apply shadow-glow;
+  }
+
+  .glow-lg {
+    @apply shadow-glow-lg;
+  }
+
+  .glow-blue {
+    @apply text-glow-blue shadow-[0_0_10px_currentColor];
+  }
+
+  .glow-green {
+    @apply text-glow-green shadow-[0_0_10px_currentColor];
+  }
+
+  .glow-cyan {
+    @apply text-glow-cyan shadow-[0_0_10px_currentColor];
+  }
+
+  .glow-purple {
+    @apply text-glow-purple shadow-[0_0_10px_currentColor];
+  }
+}
+
+/* Utility layer styles */
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  /* Animation utilities are defined in tailwind.config.js */
+}
+
+/* React Grid Layout custom styles */
+.react-grid-layout {
+  position: relative;
+  width: 100% !important;
+  height: 100% !important;
+  /* Remove pointer-events: none to allow react-grid-layout dragging */
+}
+
+.react-grid-item {
+  transition: all 200ms ease;
+  transition-property: left, top, width, height;
+  box-sizing: border-box;
+  /* Grid items capture events */
+  pointer-events: auto !important;
+}
+
+.react-grid-item > .hud-widget {
+  width: 100% !important;
+  height: 100% !important;
+  box-sizing: border-box;
+  pointer-events: auto !important;
+  position: relative;
+  z-index: 1;
+}
+
+.react-grid-item img {
+  pointer-events: none;
+  user-select: none;
+}
+
+.react-grid-item > .react-resizable-handle {
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  z-index: 100;
+  pointer-events: auto !important;
+}
+
+/* Visual indicator for southeast corner handle */
+.react-grid-item > .react-resizable-handle-se::after {
+  content: "";
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-right: 2px solid hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--primary));
+  opacity: 0.4;
+  transition: opacity 200ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle-se::after {
+  opacity: 1;
+}
+
+/* Visual indicator for southwest corner handle */
+.react-grid-item > .react-resizable-handle-sw::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  bottom: 3px;
+  width: 8px;
+  height: 8px;
+  border-left: 2px solid hsl(var(--primary));
+  border-bottom: 2px solid hsl(var(--primary));
+  opacity: 0.4;
+  transition: opacity 200ms ease;
+}
+
+.react-grid-item:hover > .react-resizable-handle-sw::after {
+  opacity: 1;
+}
+
+.react-grid-item.react-draggable-dragging {
+  transition: none;
+  z-index: 100;
+  opacity: 0.8;
+}
+
+.react-grid-item.react-grid-placeholder {
+  background: hsl(var(--primary) / 0.2);
+  border: 2px dashed hsl(var(--primary));
+  opacity: 0.5;
+  transition-duration: 100ms;
+  z-index: 2;
+  border-radius: 0.5rem;
+}
+
+/* Widget drag handle - only show grab cursor on title bar when draggable */
+.react-grid-item.react-draggable .hud-widget-header {
+  cursor: grab !important;
+  user-select: none;
+  /* DEBUG: Add visible border to see if this selector is working */
+  border-bottom: 3px solid hsl(var(--primary) / 0.5) !important;
+}
+
+.react-grid-item.react-draggable .hud-widget-header:hover {
+  background-color: hsl(var(--primary) / 0.15);
+  cursor: grab !important;
+}
+
+.react-grid-item.react-draggable-dragging .hud-widget-header {
+  cursor: grabbing !important;
+  background-color: hsl(var(--primary) / 0.25);
+}
+
+/* Static (locked) widgets have default cursor */
+.react-grid-item.static .hud-widget-header {
+  cursor: default;
+  user-select: auto;
+}
+
+/* Ensure menu buttons override grab cursor */
+.hud-widget-header button {
+  cursor: pointer !important;
+}
+
+/* Widget content should never show resize or grab cursor */
+.hud-widget-content {
+  cursor: default !important;
+}
+
+/* Main widget area should not interfere with drag/resize */
+.react-grid-item > .hud-widget {
+  pointer-events: auto;
+}
+
+/* Southeast (bottom-right) corner - subtle diagonal grip lines */
+.react-grid-item > .react-resizable-handle-se {
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize !important;
+  width: 16px;
+  height: 16px;
+  z-index: 1000;
+  pointer-events: auto !important;
+  background: transparent;
+}
+
+/* Three diagonal grip lines (rotated hamburger style) */
+.react-grid-item > .react-resizable-handle-se::before {
+  content: "";
+  position: absolute;
+  bottom: 1px;
+  right: 1px;
+  width: 14px;
+  height: 14px;
+  background:
+    linear-gradient(to bottom right, transparent 40%, hsl(var(--muted-foreground) / 0.3) 40%, hsl(var(--muted-foreground) / 0.3) 60%, transparent 60%),
+    linear-gradient(to bottom right, transparent 45%, hsl(var(--muted-foreground) / 0.4) 45%, hsl(var(--muted-foreground) / 0.4) 55%, transparent 55%),
+    linear-gradient(to bottom right, transparent 47%, hsl(var(--muted-foreground) / 0.5) 47%, hsl(var(--muted-foreground) / 0.5) 53%, transparent 53%);
+  background-size: 4px 4px, 8px 8px, 12px 12px;
+  background-position: bottom 0px right 0px, bottom 2px right 2px, bottom 4px right 4px;
+  background-repeat: no-repeat;
+}
+
+/* Slightly more visible on hover */
+.react-grid-item > .react-resizable-handle-se:hover::before {
+  background:
+    linear-gradient(to bottom right, transparent 40%, hsl(var(--primary) / 0.5) 40%, hsl(var(--primary) / 0.5) 60%, transparent 60%),
+    linear-gradient(to bottom right, transparent 45%, hsl(var(--primary) / 0.6) 45%, hsl(var(--primary) / 0.6) 55%, transparent 55%),
+    linear-gradient(to bottom right, transparent 47%, hsl(var(--primary) / 0.7) 47%, hsl(var(--primary) / 0.7) 53%, transparent 53%);
+  background-size: 4px 4px, 8px 8px, 12px 12px;
+  background-position: bottom 0px right 0px, bottom 2px right 2px, bottom 4px right 4px;
+  background-repeat: no-repeat;
+}
+
+.drag-handle {
+  cursor: move;
+  cursor: grab;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}

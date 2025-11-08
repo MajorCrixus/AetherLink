@@ -1,0 +1,84 @@
+version: '3.8'
+
+services:
+  aetherlink:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: aetherlink-app
+    restart: unless-stopped
+    ports:
+      - "9000:9000"
+    environment:
+      - DEMO_MODE=false
+      - LOG_LEVEL=INFO
+      - DATABASE_URL=sqlite+aiosqlite:///./data/aetherlink.db
+    volumes:
+      # Database persistence
+      - aetherlink_data:/app/data
+
+      # Hardware device access (for production)
+      - /dev/ttyAMA0:/dev/ttyAMA0  # GPS
+      - /dev/imu:/dev/imu  # IMU
+      - /dev/rs485:/dev/rs485  # RS485 Hub
+
+      # Configuration overrides
+      - ./config:/app/config:ro
+
+      # Logs
+      - ./logs:/app/logs
+
+    # Device access for hardware
+    devices:
+      - /dev/ttyAMA0:/dev/ttyAMA0
+      - /dev/ttyUSB0:/dev/ttyUSB0
+      - /dev/ttyUSB1:/dev/ttyUSB1
+      - /dev/imu:/dev/imu
+      - /dev/rs485:/dev/rs485
+
+    # Privileged mode for GPIO access (uncomment if needed)
+    # privileged: true
+
+    # Network mode for device discovery (optional)
+    # network_mode: host
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.aetherlink.rule=Host(`aetherlink.local`)"
+      - "traefik.http.services.aetherlink.loadbalancer.server.port=9000"
+
+    healthcheck:
+      test: ["CMD", "python", "-c", "import requests; requests.get('http://localhost:9000/api/health')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  # Optional: Add a reverse proxy
+  # traefik:
+  #   image: traefik:v2.10
+  #   container_name: aetherlink-proxy
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #     - "443:443"
+  #     - "8080:8080"  # Traefik dashboard
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock:ro
+  #     - ./traefik.yml:/etc/traefik/traefik.yml:ro
+  #     - ./certs:/certs:ro
+  #   command:
+  #     - --api.dashboard=true
+  #     - --providers.docker=true
+  #     - --providers.docker.exposedbydefault=false
+  #     - --entrypoints.web.address=:80
+  #     - --entrypoints.websecure.address=:443
+
+volumes:
+  aetherlink_data:
+    driver: local
+
+networks:
+  default:
+    name: aetherlink_network

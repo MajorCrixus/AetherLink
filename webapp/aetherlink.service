@@ -1,0 +1,39 @@
+[Unit]
+Description=AetherLink SATCOM Control System
+Documentation=https://github.com/your-org/aetherlink
+After=network.target docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+RemainAfterExit=no
+WorkingDirectory=/opt/aetherlink
+ExecStart=/usr/bin/docker-compose up
+ExecStop=/usr/bin/docker-compose down
+ExecReload=/usr/bin/docker-compose restart
+TimeoutStartSec=900
+TimeoutStopSec=120
+
+# Restart policy
+Restart=always
+RestartSec=10
+
+# Resource limits
+CPUQuota=80%
+MemoryLimit=2G
+
+# Security
+User=aetherlink
+Group=aetherlink
+NoNewPrivileges=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aetherlink
+
+# Environment
+Environment=COMPOSE_PROJECT_NAME=aetherlink
+
+[Install]
+WantedBy=multi-user.target
