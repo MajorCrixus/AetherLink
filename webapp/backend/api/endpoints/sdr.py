@@ -10,7 +10,7 @@ from typing import Optional, List
 import asyncio
 import logging
 
-from backend.services.sdr_manager import sdr_manager
+from hardware.sdr.hackrf_manager import sdr_manager
 
 logger = logging.getLogger(__name__)
 
