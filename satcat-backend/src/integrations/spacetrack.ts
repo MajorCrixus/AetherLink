@@ -251,12 +251,12 @@ export class SpaceTrackClient {
       predicates.push(`COUNTRY/${params.countries.join('|')}`);
     }
 
-    // Build URL
-    const limit = params.limit || 100000; // High default limit to get all records
+    // Build URL - only add limit if explicitly provided
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
-    const url = `${BASE_URL}/basicspacedata/query/class/satcat${predicateStr}/orderby/LAUNCH desc/limit/${limit}/format/json`;
+    const limitStr = params.limit ? `/limit/${params.limit}` : '';
+    const url = `${BASE_URL}/basicspacedata/query/class/satcat${predicateStr}/orderby/LAUNCH desc${limitStr}/format/json`;
 
-    console.log(`[SpaceTrack] Querying SATCAT with ${predicates.length} predicates (limit ${limit})`);
+    console.log(`[SpaceTrack] Querying SATCAT with ${predicates.length} predicates${params.limit ? ` (limit ${params.limit})` : ' (no limit)'}`);
 
     const response = await spaceTrackClient.fetch(url, {
       method: 'GET',
@@ -302,12 +302,12 @@ export class SpaceTrackClient {
     // Ordinal 1 = most recent
     predicates.push('ORDINAL/1');
 
-    // Build URL
-    const limit = params.limit || 100000; // High default limit to get all records
+    // Build URL - only add limit if explicitly provided
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
-    const url = `${BASE_URL}/basicspacedata/query/class/tle_latest${predicateStr}/orderby/EPOCH desc/limit/${limit}/format/json`;
+    const limitStr = params.limit ? `/limit/${params.limit}` : '';
+    const url = `${BASE_URL}/basicspacedata/query/class/tle_latest${predicateStr}/orderby/EPOCH desc${limitStr}/format/json`;
 
-    console.log(`[SpaceTrack] Querying TLE_LATEST with ${predicates.length} predicates (limit ${limit})`);
+    console.log(`[SpaceTrack] Querying TLE_LATEST with ${predicates.length} predicates${params.limit ? ` (limit ${params.limit})` : ' (no limit)'}`);
 
     const response = await spaceTrackClient.fetch(url, {
       method: 'GET',
@@ -362,12 +362,12 @@ export class SpaceTrackClient {
       predicates.push('EPOCH/>now-30');
     }
 
-    // Build URL
-    const limit = params.limit || 100000; // High default limit to get all records
+    // Build URL - only add limit if explicitly provided
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
-    const url = `${BASE_URL}/basicspacedata/query/class/gp${predicateStr}/orderby/NORAD_CAT_ID,EPOCH desc/limit/${limit}/format/json`;
+    const limitStr = params.limit ? `/limit/${params.limit}` : '';
+    const url = `${BASE_URL}/basicspacedata/query/class/gp${predicateStr}/orderby/NORAD_CAT_ID,EPOCH desc${limitStr}/format/json`;
 
-    console.log(`[SpaceTrack] Querying GP with ${predicates.length} predicates (limit ${limit})`);
+    console.log(`[SpaceTrack] Querying GP with ${predicates.length} predicates${params.limit ? ` (limit ${params.limit})` : ' (no limit)'}`);
 
     const response = await spaceTrackClient.fetch(url, {
       method: 'GET',
