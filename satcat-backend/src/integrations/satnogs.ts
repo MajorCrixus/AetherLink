@@ -78,7 +78,7 @@ export const FREQUENCY_BANDS = {
  * Classify frequency into band
  */
 export function classifyFrequencyBand(freqHz: number): string {
-  for (const [bandName, range] of Object.entries(FREQUENCY_BANDS)) {
+  for (const [_bandName, range] of Object.entries(FREQUENCY_BANDS)) {
     if (freqHz >= range.min && freqHz < range.max) {
       return range.name;
     }
@@ -136,7 +136,7 @@ export class SatnogsClient {
         throw new Error(`SatNOGS API request failed: ${response.status} ${response.statusText}`);
       }
 
-      const data = await response.json();
+      const data = await response.json() as any;
 
       // Handle paginated response
       if (Array.isArray(data)) {

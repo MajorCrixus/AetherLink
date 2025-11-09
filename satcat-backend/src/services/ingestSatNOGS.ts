@@ -222,7 +222,7 @@ export async function ingestSatnogsData(
 ): Promise<IngestResult> {
   const {
     fullRefresh = false,
-    limit = 10000,
+    limit, // No default limit - fetch all records
     daysBack = 7,
     statusFilter = 'active',
   } = options;

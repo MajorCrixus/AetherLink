@@ -73,4 +73,4 @@ Potential upgrades for the antenna platform:
 
 ---
 
-**The OW70L gave this project life—now it enables open satellite communication for everyone.** 🛰️
+**The OW70L gave this project life** 🛰️

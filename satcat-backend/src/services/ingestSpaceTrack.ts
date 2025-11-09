@@ -219,7 +219,7 @@ async function updateIngestState(
 export async function ingestSpaceTrackData(
   options: IngestOptions = {}
 ): Promise<IngestResult> {
-  const { fullRefresh = false, limit = 1000, daysBack = 7 } = options;
+  const { fullRefresh = false, limit, daysBack = 7 } = options;
 
   console.log('[SpaceTrack Ingest] Starting...');
 

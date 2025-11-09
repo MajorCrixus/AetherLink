@@ -39,7 +39,7 @@ export class RateLimitedClient {
 
   constructor(config?: Partial<RateLimitConfig>) {
     this.config = {
-      minIntervalMs: config?.minIntervalMs ?? parseInt(process.env.SPACETRACK_MIN_INTERVAL_MS || '1200'),
+      minIntervalMs: config?.minIntervalMs ?? parseInt(process.env.SPACETRACK_MIN_INTERVAL_MS || '0'),
       maxRetries: config?.maxRetries ?? 5,
       initialBackoffMs: config?.initialBackoffMs ?? 1000,
       maxBackoffMs: config?.maxBackoffMs ?? 30000,
@@ -50,7 +50,11 @@ export class RateLimitedClient {
       pendingRequests: 0,
     };
 
-    console.log(`[RateLimitedClient] Initialized with ${this.config.minIntervalMs}ms minimum interval`);
+    if (this.config.minIntervalMs > 0) {
+      console.log(`[RateLimitedClient] Initialized with ${this.config.minIntervalMs}ms minimum interval`);
+    } else {
+      console.log(`[RateLimitedClient] Initialized with NO artificial rate limiting (Space-Track enforces 30/min, 300/hour)`);
+    }
   }
 
   /**
@@ -63,7 +67,7 @@ export class RateLimitedClient {
   async fetch(url: string, options?: RequestOptions): Promise<Response> {
     // Queue this request to ensure serial execution
     const request = this.requestQueue.then(() => this._fetchWithRetry(url, options));
-    this.requestQueue = request.catch(() => {}); // Don't let failures block the queue
+    this.requestQueue = request.then(() => {}).catch(() => {}); // Don't let failures block the queue
     return request;
   }
 

@@ -252,7 +252,7 @@ export class SpaceTrackClient {
     }
 
     // Build URL
-    const limit = params.limit || 1000;
+    const limit = params.limit || 100000; // High default limit to get all records
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
     const url = `${BASE_URL}/basicspacedata/query/class/satcat${predicateStr}/orderby/LAUNCH desc/limit/${limit}/format/json`;
 
@@ -303,7 +303,7 @@ export class SpaceTrackClient {
     predicates.push('ORDINAL/1');
 
     // Build URL
-    const limit = params.limit || 1000;
+    const limit = params.limit || 100000; // High default limit to get all records
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
     const url = `${BASE_URL}/basicspacedata/query/class/tle_latest${predicateStr}/orderby/EPOCH desc/limit/${limit}/format/json`;
 
@@ -363,7 +363,7 @@ export class SpaceTrackClient {
     }
 
     // Build URL
-    const limit = params.limit || 10000;
+    const limit = params.limit || 100000; // High default limit to get all records
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
     const url = `${BASE_URL}/basicspacedata/query/class/gp${predicateStr}/orderby/NORAD_CAT_ID,EPOCH desc/limit/${limit}/format/json`;
 

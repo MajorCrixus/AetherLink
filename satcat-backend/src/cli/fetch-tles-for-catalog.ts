@@ -113,7 +113,6 @@ async function main(): Promise<void> {
 
     // Fetch TLEs in batches (rate-limited by Space-Track client)
     let successCount = 0;
-    let skipCount = 0;
     let errorCount = 0;
 
     console.log('Fetching TLEs...\n');
