@@ -11,7 +11,7 @@
 
 import { spaceTrack } from '../integrations/spacetrack.js';
 import { pool } from '../db/client.js';
-import type { SatcatEntry, TleEntry } from '../integrations/spacetrack.js';
+import type { SatcatEntry, GPEntry } from '../integrations/spacetrack.js';
 
 /**
  * Ingest options
@@ -142,14 +142,19 @@ async function upsertSatellite(entry: SatcatEntry): Promise<'inserted' | 'update
 }
 
 /**
- * Process and insert TLE entry
+ * Process and insert GP/TLE entry
  */
-async function insertTle(entry: TleEntry): Promise<void> {
+async function insertTle(entry: GPEntry): Promise<void> {
   const noradId = parseInt(entry.NORAD_CAT_ID, 10);
 
   // Parse epoch
   const epoch = entry.EPOCH ? new Date(entry.EPOCH) : new Date();
   const elementSetNo = entry.ELEMENT_SET_NO ? parseInt(entry.ELEMENT_SET_NO, 10) : null;
+
+  // Skip if no TLE lines (classified objects)
+  if (!entry.TLE_LINE1 || !entry.TLE_LINE2) {
+    return;
+  }
 
   // Calculate time window for duplicate detection (±1 minute)
   const epochLower = new Date(epoch.getTime() - 60000); // 1 minute before
@@ -175,22 +180,10 @@ async function insertTle(entry: TleEntry): Promise<void> {
     entry.TLE_LINE2,
     epoch,
     elementSetNo,
-    'space-track',
+    'space-track-gp',
     epochLower,
     epochUpper,
   ]);
-}
-
-/**
- * Get last ingest timestamp for a source
- */
-async function getLastIngestTime(source: string): Promise<Date | null> {
-  const result = await pool.query(
-    'SELECT last_successful_fetch_at FROM ingest_state WHERE source = $1',
-    [source]
-  );
-
-  return result.rows.length > 0 ? result.rows[0].last_successful_fetch_at : null;
 }
 
 /**
@@ -217,9 +210,9 @@ async function updateIngestState(
  * Main ingest function
  */
 export async function ingestSpaceTrackData(
-  options: IngestOptions = {}
+  _options: IngestOptions = {}
 ): Promise<IngestResult> {
-  const { fullRefresh = false, limit, daysBack = 7 } = options;
+  // Note: fullRefresh, limit, daysBack unused - we always fetch all on-orbit objects
 
   console.log('[SpaceTrack Ingest] Starting...');
 
@@ -237,23 +230,15 @@ export async function ingestSpaceTrackData(
     // STEP 1: Ingest SATCAT data
     // =========================================================================
     console.log('[SpaceTrack Ingest] Fetching SATCAT...');
+    console.log('[SpaceTrack Ingest] Query: all on-orbit payloads (DECAY_DATE=null, OBJECT_TYPE=PAYLOAD)');
 
-    let satcatParams: any = { limit };
-
-    if (!fullRefresh) {
-      // Delta mode: fetch only satellites launched/updated recently
-      const lastIngest = await getLastIngestTime('spacetrack_satcat');
-      if (lastIngest) {
-        const sinceDate = new Date(lastIngest);
-        sinceDate.setDate(sinceDate.getDate() - daysBack); // Add overlap to catch updates
-        satcatParams.launched_since = sinceDate.toISOString().split('T')[0];
-        console.log(`[SpaceTrack Ingest] Delta mode: fetching satellites launched since ${satcatParams.launched_since}`);
-      } else {
-        console.log('[SpaceTrack Ingest] No previous ingest found, running full refresh');
-      }
-    } else {
-      console.log('[SpaceTrack Ingest] Full refresh mode');
-    }
+    // Use the proven query: all on-orbit payloads
+    // Space-Track recommends: run SATCAT once daily after 17:00 UTC
+    const satcatParams = {
+      current_only: true,
+      object_types: ['PAYLOAD'],  // Only active satellites, no debris/rocket bodies
+      // Note: Will add DECAY_DATE/null-val filter in querySatcat
+    };
 
     const satcatEntries = await spaceTrack.querySatcat(satcatParams);
     console.log(`[SpaceTrack Ingest] Fetched ${satcatEntries.length} SATCAT entries`);
@@ -277,24 +262,18 @@ export async function ingestSpaceTrackData(
     await updateIngestState('spacetrack_satcat', satcatEntries.length);
 
     // =========================================================================
-    // STEP 2: Ingest TLE data
+    // STEP 2: Ingest GP (General Perturbations) data
     // =========================================================================
-    console.log('[SpaceTrack Ingest] Fetching TLEs...');
+    console.log('[SpaceTrack Ingest] Fetching GP elements...');
+    console.log('[SpaceTrack Ingest] Query: all on-orbit objects (DECAY_DATE=null)');
 
-    let tleParams: any = { limit };
+    // Use the modern GP class instead of deprecated tle_latest
+    // Space-Track recommends: GP/TLE max once per hour (we're running daily)
+    const gpParams = {
+      on_orbit_only: true,  // DECAY_DATE/null-val
+    };
 
-    if (!fullRefresh) {
-      // Delta mode: fetch TLEs with recent epochs
-      const lastIngest = await getLastIngestTime('spacetrack_tle');
-      if (lastIngest) {
-        const sinceDate = new Date(lastIngest);
-        sinceDate.setDate(sinceDate.getDate() - daysBack);
-        tleParams.epoch_since = sinceDate.toISOString().split('T')[0];
-        console.log(`[SpaceTrack Ingest] Delta mode: fetching TLEs with epoch >= ${tleParams.epoch_since}`);
-      }
-    }
-
-    const tleEntries = await spaceTrack.queryLatestTle(tleParams);
+    const tleEntries = await spaceTrack.queryGP(gpParams);
     console.log(`[SpaceTrack Ingest] Fetched ${tleEntries.length} TLE entries`);
 
     // Process TLE entries

@@ -221,26 +221,15 @@ export class SpaceTrackClient {
   async querySatcat(params: SatcatQueryParams = {}): Promise<SatcatEntry[]> {
     await this.ensureLoggedIn();
 
-    // Build query string using Space-Track's predicate syntax
+    // Build query using Space-Track's predicate syntax
+    // Proven query: DECAY_DATE/null-val/OBJECT_TYPE/PAYLOAD
     const predicates: string[] = [];
+
+    // Filter to on-orbit satellites only (no decayed objects)
+    predicates.push('DECAY_DATE/null-val');
 
     if (params.norad_ids && params.norad_ids.length > 0) {
       predicates.push(`NORAD_CAT_ID/${params.norad_ids.join(',')}`);
-    }
-
-    if (params.launched_since && params.launched_until) {
-      // Range: from launched_since to launched_until
-      predicates.push(`LAUNCH/${params.launched_since}--${params.launched_until}`);
-    } else if (params.launched_since) {
-      // From launched_since to present (open-ended range)
-      predicates.push(`LAUNCH/${params.launched_since}--`);
-    } else if (params.launched_until) {
-      // From beginning to launched_until
-      predicates.push(`LAUNCH/--${params.launched_until}`);
-    }
-
-    if (params.current_only !== false) {
-      predicates.push('CURRENT/Y');
     }
 
     if (params.object_types && params.object_types.length > 0) {
@@ -254,7 +243,7 @@ export class SpaceTrackClient {
     // Build URL - only add limit if explicitly provided
     const predicateStr = predicates.length > 0 ? '/' + predicates.join('/') : '';
     const limitStr = params.limit ? `/limit/${params.limit}` : '';
-    const url = `${BASE_URL}/basicspacedata/query/class/satcat${predicateStr}/orderby/LAUNCH desc${limitStr}/format/json`;
+    const url = `${BASE_URL}/basicspacedata/query/class/satcat${predicateStr}/orderby/NORAD_CAT_ID${limitStr}/format/json`;
 
     console.log(`[SpaceTrack] Querying SATCAT with ${predicates.length} predicates${params.limit ? ` (limit ${params.limit})` : ' (no limit)'}`);
 
