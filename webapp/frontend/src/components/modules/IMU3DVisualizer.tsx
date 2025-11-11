@@ -150,12 +150,19 @@ function Lighting() {
   )
 }
 
-export function IMU3DVisualizer() {
+interface IMU3DVisualizerProps {
+  roll?: number
+  pitch?: number
+  yaw?: number
+}
+
+export function IMU3DVisualizer({ roll: propRoll, pitch: propPitch, yaw: propYaw }: IMU3DVisualizerProps = {}) {
   const telemetry = useTelemetryData()
 
-  const roll = telemetry?.imu?.roll_deg || 0
-  const pitch = telemetry?.imu?.pitch_deg || 0
-  const yaw = telemetry?.imu?.yaw_deg || 0
+  // Use props if provided, otherwise fall back to telemetry data
+  const roll = propRoll ?? telemetry?.imu?.roll_deg ?? 0
+  const pitch = propPitch ?? telemetry?.imu?.pitch_deg ?? 0
+  const yaw = propYaw ?? telemetry?.imu?.yaw_deg ?? 0
 
   return (
     <div className="w-full h-full">

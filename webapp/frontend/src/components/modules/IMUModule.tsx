@@ -1,7 +1,8 @@
 import React, { useMemo, useRef, useState, useEffect } from 'react'
 import { motion } from 'framer-motion'
-import { Compass, Activity, Thermometer, Gauge, RotateCcw, Play, Pause } from 'lucide-react'
+import { Compass, Activity, Thermometer, Gauge, RotateCcw, Play, Pause, Maximize2 } from 'lucide-react'
 import { useIMUData } from '@/stores/telemetryStore'
+import { IMU3DVisualizer } from './IMU3DVisualizer'
 
 function StatusIndicator({
   label,
@@ -131,6 +132,33 @@ export function IMUModule() {
                 {isPaused ? <Play className="w-4 h-4" /> : <Pause className="w-4 h-4" />}
                 <span>{isPaused ? 'Resume' : 'Pause'}</span>
               </button>
+            </div>
+          </div>
+        </motion.div>
+
+        {/* 3D Visualization */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.05 }}
+          className="mb-6"
+        >
+          <div className="panel overflow-hidden">
+            <div className="panel-header">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Compass className="w-5 h-5" />
+                  <span className="text-lg">Real-Time Orientation</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  IMU mounted on antenna dish back
+                </div>
+              </div>
+            </div>
+            <div className="panel-content p-0">
+              <div className="h-[500px] w-full">
+                <IMU3DVisualizer roll={roll} pitch={pitch} yaw={yaw} />
+              </div>
             </div>
           </div>
         </motion.div>
