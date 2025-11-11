@@ -14,18 +14,22 @@ function AntennaDishWithIMU({ roll, pitch, yaw }: { roll: number; pitch: number;
   const groupRef = useRef<THREE.Group>(null)
 
   // IMU mounting offset - the IMU is physically mounted at ~35° pitch on the dish back
-  const MOUNTING_OFFSET_PITCH = 34.7 * (Math.PI / 180) // Convert to radians
+  // When dish points at horizon, IMU reads ~35° pitch
+  const MOUNTING_OFFSET_PITCH = -34.7 * (Math.PI / 180) // Negative to compensate
 
   // Convert IMU readings to radians
   const rollRad = roll * (Math.PI / 180)
   const pitchRad = pitch * (Math.PI / 180)
   const yawRad = yaw * (Math.PI / 180)
 
+  // Apply IMU orientation with mounting offset correction
+  // Rotation order: roll (Z), pitch (X), yaw (Y)
   return (
-    <group ref={groupRef} rotation={[pitchRad, yawRad, rollRad]}>
-      {/* Parabolic satellite dish */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.15]}>
-        <sphereGeometry args={[0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+    <group ref={groupRef}>
+      <group rotation={[pitchRad + MOUNTING_OFFSET_PITCH, yawRad, rollRad]}>
+        {/* Parabolic satellite dish - concave side faces +Z direction */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.15]}>
+          <sphereGeometry args={[0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
         <meshStandardMaterial
           color="#e8e8e8"
           metalness={0.9}
@@ -34,130 +38,130 @@ function AntennaDishWithIMU({ roll, pitch, yaw }: { roll: number; pitch: number;
         />
       </mesh>
 
-      {/* Dish rim/edge */}
-      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.15]}>
-        <torusGeometry args={[0.6, 0.015, 8, 32]} />
-        <meshStandardMaterial color="#c0c0c0" metalness={0.8} roughness={0.3} />
-      </mesh>
-
-      {/* Feed assembly (LNB arm) */}
-      <group position={[0, 0, 0]}>
-        {/* Center support arm */}
-        <mesh position={[0, 0, -0.3]} rotation={[0, 0, 0]}>
-          <cylinderGeometry args={[0.02, 0.02, 0.6, 8]} />
-          <meshStandardMaterial color="#4a4a4a" metalness={0.7} roughness={0.4} />
+        {/* Dish rim/edge */}
+        <mesh rotation={[Math.PI / 2, 0, 0]} position={[0, 0, -0.15]}>
+          <torusGeometry args={[0.6, 0.015, 8, 32]} />
+          <meshStandardMaterial color="#c0c0c0" metalness={0.8} roughness={0.3} />
         </mesh>
 
-        {/* LNB feed horn at the focal point */}
-        <mesh position={[0, 0, -0.6]} rotation={[Math.PI, 0, 0]}>
-          <coneGeometry args={[0.06, 0.15, 8]} />
-          <meshStandardMaterial color="#2a2a2a" metalness={0.8} roughness={0.2} />
+        {/* Feed assembly (LNB arm) pointing toward +Z */}
+        <group position={[0, 0, 0]}>
+          {/* Center support arm */}
+          <mesh position={[0, 0, 0.3]} rotation={[0, 0, 0]}>
+            <cylinderGeometry args={[0.02, 0.02, 0.6, 8]} />
+            <meshStandardMaterial color="#4a4a4a" metalness={0.7} roughness={0.4} />
+          </mesh>
+
+          {/* LNB feed horn at the focal point */}
+          <mesh position={[0, 0, 0.6]} rotation={[0, 0, 0]}>
+            <coneGeometry args={[0.06, 0.15, 8]} />
+            <meshStandardMaterial color="#2a2a2a" metalness={0.8} roughness={0.2} />
+          </mesh>
+
+          {/* LNB housing */}
+          <mesh position={[0, 0, 0.68]}>
+            <boxGeometry args={[0.12, 0.08, 0.08]} />
+            <meshStandardMaterial color="#1a1a1a" metalness={0.6} roughness={0.5} />
+          </mesh>
+        </group>
+
+        {/* IMU mounting plate on dish back */}
+        <mesh position={[0, 0, -0.2]}>
+          <boxGeometry args={[0.15, 0.02, 0.1]} />
+          <meshStandardMaterial color="#1a472a" roughness={0.8} metalness={0.2} />
         </mesh>
 
-        {/* LNB housing */}
-        <mesh position={[0, 0, -0.68]}>
-          <boxGeometry args={[0.12, 0.08, 0.08]} />
-          <meshStandardMaterial color="#1a1a1a" metalness={0.6} roughness={0.5} />
+        {/* Small IMU sensor representation */}
+        <mesh position={[0, 0, -0.22]}>
+          <boxGeometry args={[0.08, 0.015, 0.06]} />
+          <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.8} />
         </mesh>
-      </group>
 
-      {/* IMU mounting plate on dish back */}
-      <mesh position={[0, 0, 0.2]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
-        <boxGeometry args={[0.15, 0.02, 0.1]} />
-        <meshStandardMaterial color="#1a472a" roughness={0.8} metalness={0.2} />
-      </mesh>
+        {/* Pointing vector - shows where the dish is aimed in +Z direction */}
+        <group position={[0, 0, 0.75]}>
+          <mesh rotation={[0, 0, 0]}>
+            <cylinderGeometry args={[0.008, 0.008, 0.5, 8]} />
+            <meshStandardMaterial
+              color="#00ff00"
+              emissive="#00ff00"
+              emissiveIntensity={0.8}
+              transparent
+              opacity={0.7}
+            />
+          </mesh>
 
-      {/* Small IMU sensor representation */}
-      <mesh position={[0, 0, 0.22]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
-        <boxGeometry args={[0.08, 0.015, 0.06]} />
-        <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.8} />
-      </mesh>
+          {/* Arrowhead */}
+          <mesh position={[0, 0.3, 0]} rotation={[0, 0, 0]}>
+            <coneGeometry args={[0.025, 0.08, 8]} />
+            <meshStandardMaterial
+              color="#00ff00"
+              emissive="#00ff00"
+              emissiveIntensity={0.8}
+            />
+          </mesh>
 
-      {/* Pointing vector - shows where the dish is aimed */}
-      <group position={[0, 0, -0.75]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <cylinderGeometry args={[0.008, 0.008, 0.5, 8]} />
-          <meshStandardMaterial
+          <Text
+            position={[0, 0.4, 0]}
+            fontSize={0.08}
             color="#00ff00"
-            emissive="#00ff00"
-            emissiveIntensity={0.8}
-            transparent
-            opacity={0.7}
-          />
-        </mesh>
+            anchorX="center"
+            anchorY="middle"
+          >
+            POINTING
+          </Text>
+        </group>
 
-        {/* Arrowhead */}
-        <mesh position={[0, 0, -0.3]} rotation={[Math.PI, 0, 0]}>
-          <coneGeometry args={[0.025, 0.08, 8]} />
-          <meshStandardMaterial
+        {/* Axis indicators (from IMU perspective) */}
+        {/* X-axis - Right (Red) */}
+        <group position={[0.5, 0, -0.2]}>
+          <mesh rotation={[0, 0, Math.PI / 2]}>
+            <coneGeometry args={[0.03, 0.12, 8]} />
+            <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
+          </mesh>
+          <Text
+            position={[0.12, 0, 0]}
+            fontSize={0.08}
+            color="#ff0000"
+            anchorX="left"
+            anchorY="middle"
+          >
+            X
+          </Text>
+        </group>
+
+        {/* Y-axis - Up (Green) */}
+        <group position={[0, 0.25, -0.2]}>
+          <mesh>
+            <coneGeometry args={[0.03, 0.12, 8]} />
+            <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
+          </mesh>
+          <Text
+            position={[0, 0.12, 0]}
+            fontSize={0.08}
             color="#00ff00"
-            emissive="#00ff00"
-            emissiveIntensity={0.8}
-          />
-        </mesh>
+            anchorX="center"
+            anchorY="bottom"
+          >
+            Y
+          </Text>
+        </group>
 
-        <Text
-          position={[0, 0, -0.4]}
-          fontSize={0.08}
-          color="#00ff00"
-          anchorX="center"
-          anchorY="middle"
-        >
-          POINTING
-        </Text>
-      </group>
-
-      {/* Axis indicators (from IMU perspective) */}
-      {/* X-axis - Right (Red) */}
-      <group position={[0.5, 0, 0.2]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
-        <mesh rotation={[0, 0, Math.PI / 2]}>
-          <coneGeometry args={[0.03, 0.12, 8]} />
-          <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
-        </mesh>
-        <Text
-          position={[0.12, 0, 0]}
-          fontSize={0.08}
-          color="#ff0000"
-          anchorX="left"
-          anchorY="middle"
-        >
-          X
-        </Text>
-      </group>
-
-      {/* Y-axis - Up (Green) */}
-      <group position={[0, 0.25, 0.2]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
-        <mesh>
-          <coneGeometry args={[0.03, 0.12, 8]} />
-          <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
-        </mesh>
-        <Text
-          position={[0, 0.12, 0]}
-          fontSize={0.08}
-          color="#00ff00"
-          anchorX="center"
-          anchorY="bottom"
-        >
-          Y
-        </Text>
-      </group>
-
-      {/* Z-axis - Pointing direction (Blue) */}
-      <group position={[0, 0, -0.1]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
-        <mesh rotation={[Math.PI / 2, 0, 0]}>
-          <coneGeometry args={[0.03, 0.12, 8]} />
-          <meshStandardMaterial color="#0000ff" emissive="#0000ff" emissiveIntensity={0.5} />
-        </mesh>
-        <Text
-          position={[0, 0, -0.12]}
-          fontSize={0.08}
-          color="#0000ff"
-          anchorX="center"
-          anchorY="top"
-          rotation={[Math.PI / 2, 0, 0]}
-        >
-          Z
-        </Text>
+        {/* Z-axis - Pointing direction (Blue) */}
+        <group position={[0, 0, 0.1]}>
+          <mesh rotation={[0, 0, 0]}>
+            <coneGeometry args={[0.03, 0.12, 8]} />
+            <meshStandardMaterial color="#0000ff" emissive="#0000ff" emissiveIntensity={0.5} />
+          </mesh>
+          <Text
+            position={[0, 0.12, 0]}
+            fontSize={0.08}
+            color="#0000ff"
+            anchorX="center"
+            anchorY="bottom"
+          >
+            Z
+          </Text>
+        </group>
       </group>
     </group>
   )
@@ -291,8 +295,10 @@ export function IMU3DVisualizer({ roll: propRoll, pitch: propPitch, yaw: propYaw
           enablePan={true}
           enableRotate={true}
           minDistance={1}
-          maxDistance={8}
-          target={[0, 0.5, 0]}
+          maxDistance={10}
+          target={[0, 0, 0]}
+          maxPolarAngle={Math.PI}  // Allow full vertical rotation
+          minPolarAngle={0}
         />
       </Canvas>
 
