@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AetherLink Dashboard Diagnostic</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1a1a1a; color: #00ff00; }
+        .test { margin: 20px 0; padding: 15px; border: 1px solid #333; }
+        .pass { border-color: #0f0; }
+        .fail { border-color: #f00; color: #f00; }
+        button { background: #333; color: #0f0; border: 1px solid #0f0; padding: 10px 20px; cursor: pointer; margin: 5px; }
+        button:hover { background: #0f0; color: #000; }
+        pre { background: #000; padding: 10px; overflow-x: auto; }
+    </style>
+</head>
+<body>
+    <h1>AetherLink Dashboard Diagnostic</h1>
+
+    <div class="test" id="test-backend">
+        <h2>1. Backend Health (Port 9000)</h2>
+        <button onclick="testBackend()">Test</button>
+        <pre id="backend-result">Click Test button...</pre>
+    </div>
+
+    <div class="test" id="test-satcat">
+        <h2>2. Satcat-backend Health (Port 9001)</h2>
+        <button onclick="testSatcat()">Test</button>
+        <pre id="satcat-result">Click Test button...</pre>
+    </div>
+
+    <div class="test" id="test-satellites">
+        <h2>3. Satellite Data Loading</h2>
+        <button onclick="testSatellites()">Test</button>
+        <pre id="satellites-result">Click Test button...</pre>
+    </div>
+
+    <div class="test" id="test-localstorage">
+        <h2>4. LocalStorage Widget Config</h2>
+        <button onclick="testLocalStorage()">Check</button>
+        <button onclick="resetWidgetConfig()">Reset Widget Config</button>
+        <pre id="localstorage-result">Click Check button...</pre>
+    </div>
+
+    <script>
+        async function testBackend() {
+            const result = document.getElementById('backend-result');
+            const container = document.getElementById('test-backend');
+            try {
+                const response = await fetch('http://192.168.68.135:9000/api/health/');
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+                container.className = 'test pass';
+            } catch (error) {
+                result.textContent = 'ERROR: ' + error.message;
+                container.className = 'test fail';
+            }
+        }
+
+        async function testSatcat() {
+            const result = document.getElementById('satcat-result');
+            const container = document.getElementById('test-satcat');
+            try {
+                const response = await fetch('http://192.168.68.135:9001/api/health');
+                const data = await response.json();
+                result.textContent = JSON.stringify(data, null, 2);
+                container.className = 'test pass';
+            } catch (error) {
+                result.textContent = 'ERROR: ' + error.message;
+                container.className = 'test fail';
+            }
+        }
+
+        async function testSatellites() {
+            const result = document.getElementById('satellites-result');
+            const container = document.getElementById('test-satellites');
+            try {
+                const response = await fetch('http://192.168.68.135:9001/api/satellites?limit=5');
+                const data = await response.json();
+                result.textContent = `Loaded ${data.length} satellites:\n\n` + JSON.stringify(data, null, 2);
+                container.className = 'test pass';
+            } catch (error) {
+                result.textContent = 'ERROR: ' + error.message;
+                container.className = 'test fail';
+            }
+        }
+
+        function testLocalStorage() {
+            const result = document.getElementById('localstorage-result');
+            const config = localStorage.getItem('aetherlink-widget-config');
+            const layout = localStorage.getItem('aetherlink-dashboard-layout');
+
+            let output = '=== Widget Config ===\n';
+            if (config) {
+                const parsed = JSON.parse(config);
+                output += JSON.stringify(parsed, null, 2);
+            } else {
+                output += 'No widget config found';
+            }
+
+            output += '\n\n=== Dashboard Layout ===\n';
+            if (layout) {
+                const parsed = JSON.parse(layout);
+                output += `Found ${parsed.length} widgets in layout`;
+            } else {
+                output += 'No layout found';
+            }
+
+            result.textContent = output;
+        }
+
+        function resetWidgetConfig() {
+            localStorage.removeItem('aetherlink-widget-config');
+            localStorage.removeItem('aetherlink-dashboard-layout');
+            localStorage.removeItem('aetherlink-dashboard-locked');
+            alert('Widget configuration reset! Reload the dashboard to see default settings.');
+        }
+    </script>
+</body>
+</html>

@@ -3,6 +3,7 @@ import { Routes, Route } from 'react-router-dom'
 
 import { Layout } from '@/components/layout/Layout'
 import { Dashboard } from '@/pages/Dashboard'
+import { DashboardSettings } from '@/pages/DashboardSettings'
 import { Configuration } from '@/pages/Configuration'
 import { AntennaView } from '@/pages/AntennaView'
 import { Modules } from '@/pages/Modules'
@@ -20,6 +21,7 @@ function App() {
       <Routes>
         <Route path="/" element={<Dashboard />} />
         <Route path="/dashboard" element={<Dashboard />} />
+        <Route path="/dashboard/settings" element={<DashboardSettings />} />
         <Route path="/config" element={<Configuration />} />
         <Route path="/antenna" element={<AntennaView />} />
         <Route path="/modules/*" element={<Modules />} />

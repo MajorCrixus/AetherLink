@@ -26,6 +26,7 @@ import {
   Math as CesiumMath,
   CallbackProperty,
   ConstantProperty,
+  NearFarScalar,
 } from 'cesium'
 
 import * as satellite from 'satellite.js'
@@ -141,6 +142,8 @@ export class SatelliteVisualizationService {
             color: color,
             outlineColor: Color.WHITE,
             outlineWidth: 1,
+            // Scale points based on camera distance to keep them visible when zoomed out
+            scaleByDistance: new NearFarScalar(1.5e6, 2.0, 8.0e7, 0.5),
           },
           label: this.config.showLabels ? {
             text: sat.name,
@@ -244,6 +247,8 @@ export class SatelliteVisualizationService {
               color: color,
               outlineColor: Color.WHITE,
               outlineWidth: 1,
+              // Scale points based on camera distance to keep them visible when zoomed out
+              scaleByDistance: new NearFarScalar(1.5e6, 2.0, 8.0e7, 0.5),
             },
             label: this.config.showLabels ? {
               text: sat.name,
@@ -348,6 +353,8 @@ export class SatelliteVisualizationService {
               color: color,
               outlineColor: Color.WHITE,
               outlineWidth: 1,
+              // Scale points based on camera distance to keep them visible when zoomed out
+              scaleByDistance: new NearFarScalar(1.5e6, 2.0, 8.0e7, 0.5),
             },
             label: showLabels ? {
               text: sat.name,
@@ -388,6 +395,8 @@ export class SatelliteVisualizationService {
           color: color,
           outlineColor: Color.WHITE,
           outlineWidth: 1,
+          // Scale points based on camera distance to keep them visible when zoomed out
+          scaleByDistance: new NearFarScalar(1.5e6, 2.0, 8.0e7, 0.5),
         },
         label: showLabels ? {
           text: sat.name,

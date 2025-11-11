@@ -13,6 +13,7 @@ from dataclasses import dataclass
 from ...core.config import settings
 from ...services.telemetry_service import TelemetryService
 from ...services.satellite_tracking import calculate_azimuth_elevation
+from ...services.celestial_tracking import calculate_celestial_body_position, tracker as celestial_tracker
 from ...core.database import save_servo_command, get_servo_command_history
 
 router = APIRouter()
@@ -47,6 +48,9 @@ class ServoModeRequest(BaseModel):
 
 class SatelliteAcquireRequest(BaseModel):
     norad_id: int = Field(..., description="NORAD catalog ID of satellite to acquire")
+
+class CelestialBodyAcquireRequest(BaseModel):
+    body_name: str = Field(..., description="Name of celestial body (Moon, Sun, Mars, etc.)")
 
 # Safety limits for each axis
 AXIS_LIMITS = {
@@ -313,6 +317,111 @@ async def acquire_satellite(
         raise HTTPException(
             status_code=500,
             detail=f"Satellite acquisition failed: {str(e)}"
+        )
+
+@router.post("/acquire-celestial-body")
+async def acquire_celestial_body(
+    request: CelestialBodyAcquireRequest,
+    telemetry_service: TelemetryService = Depends(get_telemetry_service)
+) -> Dict[str, Any]:
+    """
+    Acquire celestial body (Moon, Sun, planets) by calculating azimuth and elevation
+    from ephemeris data and GPS coordinates
+
+    This endpoint:
+    1. Gets current GPS coordinates from telemetry
+    2. Calculates azimuth and elevation using Skyfield ephemeris
+    3. Commands servos to point at celestial body
+
+    Supported bodies: Moon, Sun, Mercury, Venus, Mars, Jupiter, Saturn
+    """
+    try:
+        # Get GPS coordinates from telemetry
+        gps_data = telemetry_service.get_current_state().get("gps", {})
+        lat = gps_data.get("latitude")
+        lon = gps_data.get("longitude")
+        alt = gps_data.get("altitude", 0.0)
+
+        if lat is None or lon is None:
+            raise HTTPException(
+                status_code=400,
+                detail="GPS coordinates not available. Ensure GPS has a valid fix."
+            )
+
+        # Calculate azimuth and elevation using ephemeris
+        try:
+            position = celestial_tracker.get_body_position(
+                body_name=request.body_name,
+                observer_lat=lat,
+                observer_lon=lon,
+                observer_alt_m=alt
+            )
+            azimuth = position["azimuth_deg"]
+            elevation = position["elevation_deg"]
+            distance_km = position["distance_km"]
+        except ValueError as e:
+            raise HTTPException(
+                status_code=400,
+                detail=str(e)
+            )
+
+        # Check if body is above horizon
+        if elevation < 0:
+            return {
+                "status": "warning",
+                "message": f"{request.body_name} is below horizon (elevation: {elevation:.2f}°)",
+                "body_name": request.body_name,
+                "azimuth_deg": azimuth,
+                "elevation_deg": elevation,
+                "distance_km": distance_km,
+                "commanded": False
+            }
+
+        # Validate angles are within servo limits
+        validate_target_angle("az", azimuth)
+        validate_target_angle("el", elevation)
+
+        # Command servos
+        if telemetry_service.demo_mode:
+            # Update simulator
+            telemetry_service.demo_simulator.az_target = azimuth
+            telemetry_service.demo_simulator.el_target = elevation
+        else:
+            # Command real hardware
+            az_success = await telemetry_service.hardware_manager.move_servo(
+                "AZ", azimuth, speed_rpm=20
+            )
+            el_success = await telemetry_service.hardware_manager.move_servo(
+                "EL", elevation, speed_rpm=20
+            )
+
+            if not (az_success and el_success):
+                raise HTTPException(
+                    status_code=500,
+                    detail="Failed to command servos"
+                )
+
+        return {
+            "status": "success",
+            "message": f"Acquiring {request.body_name}",
+            "body_name": request.body_name,
+            "azimuth_deg": azimuth,
+            "elevation_deg": elevation,
+            "distance_km": distance_km,
+            "observer": {
+                "latitude": lat,
+                "longitude": lon,
+                "altitude_m": alt
+            },
+            "commanded": True
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Celestial body acquisition failed: {str(e)}"
         )
 
 @router.get("/{axis}/status")

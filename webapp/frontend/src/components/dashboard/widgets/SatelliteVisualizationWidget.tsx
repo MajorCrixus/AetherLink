@@ -15,6 +15,8 @@ interface SatelliteVisualizationWidgetProps {
   showLabels?: boolean
   onToggleOrbits?: () => void
   onToggleLabels?: () => void
+  satelliteLimit?: number
+  onSatelliteLimitChange?: (limit: number) => void
 }
 
 export function SatelliteVisualizationWidget({
@@ -24,6 +26,8 @@ export function SatelliteVisualizationWidget({
   showLabels = false,
   onToggleOrbits,
   onToggleLabels,
+  satelliteLimit = 2000,
+  onSatelliteLimitChange,
 }: SatelliteVisualizationWidgetProps) {
   const [expanded, setExpanded] = useState(false)
 
@@ -137,6 +141,29 @@ export function SatelliteVisualizationWidget({
                     className="w-4 h-4"
                   />
                 </label>
+              )}
+
+              {onSatelliteLimitChange && (
+                <div className="space-y-1">
+                  <label className="flex items-center justify-between">
+                    <span className="text-sm">Satellite Limit</span>
+                    <span className="text-xs text-cyan-400 font-mono">{satelliteLimit.toLocaleString()}</span>
+                  </label>
+                  <input
+                    type="range"
+                    min="100"
+                    max="10000"
+                    step="100"
+                    value={satelliteLimit}
+                    onChange={(e) => onSatelliteLimitChange(parseInt(e.target.value))}
+                    className="w-full h-1 bg-cyan-900/30 rounded-lg appearance-none cursor-pointer accent-cyan-500"
+                  />
+                  <div className="flex justify-between text-xs text-muted-foreground">
+                    <span>100</span>
+                    <span className="text-yellow-500">⚠ Higher = slower</span>
+                    <span>10,000</span>
+                  </div>
+                </div>
               )}
             </div>
 

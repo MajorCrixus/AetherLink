@@ -50,6 +50,8 @@ interface SatelliteVisualizationProps {
   showLabels: boolean
   onToggleOrbits: () => void
   onToggleLabels: () => void
+  satelliteLimit: number
+  onSatelliteLimitChange: (limit: number) => void
   onSelectSatellite: (satellite: SatelliteSummary) => void
   selectedSatellite: SatelliteSummary | null
   satellites: SatelliteSummary[]
@@ -369,6 +371,8 @@ export function DraggableWidgets({ satelliteVisualization }: DraggableWidgetsPro
               showLabels={satelliteVisualization.showLabels}
               onToggleOrbits={satelliteVisualization.onToggleOrbits}
               onToggleLabels={satelliteVisualization.onToggleLabels}
+              satelliteLimit={satelliteVisualization.satelliteLimit}
+              onSatelliteLimitChange={satelliteVisualization.onSatelliteLimitChange}
             />
           </div>
         )}

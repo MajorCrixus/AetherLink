@@ -46,7 +46,7 @@ export function useSatelliteVisualization({
   // Stable filters reference to prevent infinite loops
   const stableFilters = useMemo(() => filters, [JSON.stringify(filters)])
 
-  // Initialize visualization service
+  // Initialize visualization service (only when viewer/enabled changes)
   useEffect(() => {
     if (!viewer || !enabled) {
       if (serviceRef.current) {
@@ -67,8 +67,6 @@ export function useSatelliteVisualization({
 
     if (!serviceRef.current) {
       serviceRef.current = new SatelliteVisualizationService(viewer, config)
-    } else {
-      serviceRef.current.updateConfig(config)
     }
 
     return () => {
@@ -77,7 +75,23 @@ export function useSatelliteVisualization({
         serviceRef.current = null
       }
     }
-  }, [viewer, enabled, mode, groundStationLat, groundStationLon, groundStationAlt, showOrbits, showLabels])
+  }, [viewer, enabled])
+
+  // Update visualization config (without disposing service)
+  useEffect(() => {
+    if (!serviceRef.current) return
+
+    const config: VisualizationConfig = {
+      mode,
+      groundStationLat,
+      groundStationLon,
+      groundStationAlt,
+      showOrbits,
+      showLabels,
+    }
+
+    serviceRef.current.updateConfig(config)
+  }, [mode, groundStationLat, groundStationLon, groundStationAlt, showOrbits, showLabels])
 
   // Load satellites from API
   const loadSatellites = useCallback(async () => {
