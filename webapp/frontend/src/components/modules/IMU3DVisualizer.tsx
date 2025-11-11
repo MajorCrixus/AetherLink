@@ -9,87 +9,161 @@ import { OrbitControls, Grid, Text } from '@react-three/drei'
 import * as THREE from 'three'
 import { useTelemetryData } from '@/stores/telemetryStore'
 
-// IMU sensor board representation
-function IMUSensorBoard({ roll, pitch, yaw }: { roll: number; pitch: number; yaw: number }) {
+// Antenna dish with IMU representation
+function AntennaDishWithIMU({ roll, pitch, yaw }: { roll: number; pitch: number; yaw: number }) {
   const groupRef = useRef<THREE.Group>(null)
 
-  // Convert degrees to radians and apply rotation
+  // IMU mounting offset - the IMU is physically mounted at ~35° pitch on the dish back
+  const MOUNTING_OFFSET_PITCH = 34.7 * (Math.PI / 180) // Convert to radians
+
+  // Convert IMU readings to radians
   const rollRad = roll * (Math.PI / 180)
   const pitchRad = pitch * (Math.PI / 180)
   const yawRad = yaw * (Math.PI / 180)
 
   return (
     <group ref={groupRef} rotation={[pitchRad, yawRad, rollRad]}>
-      {/* Main PCB board */}
-      <mesh>
-        <boxGeometry args={[1, 0.05, 0.6]} />
+      {/* Parabolic satellite dish */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.15]}>
+        <sphereGeometry args={[0.6, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2]} />
+        <meshStandardMaterial
+          color="#e8e8e8"
+          metalness={0.9}
+          roughness={0.1}
+          side={THREE.DoubleSide}
+        />
+      </mesh>
+
+      {/* Dish rim/edge */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, 0, 0.15]}>
+        <torusGeometry args={[0.6, 0.015, 8, 32]} />
+        <meshStandardMaterial color="#c0c0c0" metalness={0.8} roughness={0.3} />
+      </mesh>
+
+      {/* Feed assembly (LNB arm) */}
+      <group position={[0, 0, 0]}>
+        {/* Center support arm */}
+        <mesh position={[0, 0, -0.3]} rotation={[0, 0, 0]}>
+          <cylinderGeometry args={[0.02, 0.02, 0.6, 8]} />
+          <meshStandardMaterial color="#4a4a4a" metalness={0.7} roughness={0.4} />
+        </mesh>
+
+        {/* LNB feed horn at the focal point */}
+        <mesh position={[0, 0, -0.6]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.06, 0.15, 8]} />
+          <meshStandardMaterial color="#2a2a2a" metalness={0.8} roughness={0.2} />
+        </mesh>
+
+        {/* LNB housing */}
+        <mesh position={[0, 0, -0.68]}>
+          <boxGeometry args={[0.12, 0.08, 0.08]} />
+          <meshStandardMaterial color="#1a1a1a" metalness={0.6} roughness={0.5} />
+        </mesh>
+      </group>
+
+      {/* IMU mounting plate on dish back */}
+      <mesh position={[0, 0, 0.2]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
+        <boxGeometry args={[0.15, 0.02, 0.1]} />
         <meshStandardMaterial color="#1a472a" roughness={0.8} metalness={0.2} />
       </mesh>
 
-      {/* Components on board */}
-      <mesh position={[0, 0.04, 0]}>
-        <boxGeometry args={[0.3, 0.02, 0.3]} />
+      {/* Small IMU sensor representation */}
+      <mesh position={[0, 0, 0.22]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
+        <boxGeometry args={[0.08, 0.015, 0.06]} />
         <meshStandardMaterial color="#2a2a2a" roughness={0.5} metalness={0.8} />
       </mesh>
 
-      {/* Axis indicators */}
-      {/* Forward arrow (X-axis - Roll) */}
-      <group position={[0.6, 0.03, 0]}>
-        <mesh>
-          <coneGeometry args={[0.05, 0.15, 8]} />
+      {/* Pointing vector - shows where the dish is aimed */}
+      <group position={[0, 0, -0.75]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <cylinderGeometry args={[0.008, 0.008, 0.5, 8]} />
+          <meshStandardMaterial
+            color="#00ff00"
+            emissive="#00ff00"
+            emissiveIntensity={0.8}
+            transparent
+            opacity={0.7}
+          />
+        </mesh>
+
+        {/* Arrowhead */}
+        <mesh position={[0, 0, -0.3]} rotation={[Math.PI, 0, 0]}>
+          <coneGeometry args={[0.025, 0.08, 8]} />
+          <meshStandardMaterial
+            color="#00ff00"
+            emissive="#00ff00"
+            emissiveIntensity={0.8}
+          />
+        </mesh>
+
+        <Text
+          position={[0, 0, -0.4]}
+          fontSize={0.08}
+          color="#00ff00"
+          anchorX="center"
+          anchorY="middle"
+        >
+          POINTING
+        </Text>
+      </group>
+
+      {/* Axis indicators (from IMU perspective) */}
+      {/* X-axis - Right (Red) */}
+      <group position={[0.5, 0, 0.2]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
+        <mesh rotation={[0, 0, Math.PI / 2]}>
+          <coneGeometry args={[0.03, 0.12, 8]} />
           <meshStandardMaterial color="#ff0000" emissive="#ff0000" emissiveIntensity={0.5} />
         </mesh>
         <Text
-          position={[0.15, 0, 0]}
-          fontSize={0.1}
+          position={[0.12, 0, 0]}
+          fontSize={0.08}
           color="#ff0000"
           anchorX="left"
           anchorY="middle"
         >
-          FORWARD
+          X
         </Text>
       </group>
 
-      {/* Up arrow (Y-axis - Pitch) */}
-      <group position={[0, 0.3, 0]} rotation={[0, 0, -Math.PI / 2]}>
+      {/* Y-axis - Up (Green) */}
+      <group position={[0, 0.25, 0.2]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
         <mesh>
-          <coneGeometry args={[0.05, 0.15, 8]} />
+          <coneGeometry args={[0.03, 0.12, 8]} />
           <meshStandardMaterial color="#00ff00" emissive="#00ff00" emissiveIntensity={0.5} />
         </mesh>
         <Text
-          position={[0.15, 0, 0]}
-          fontSize={0.1}
+          position={[0, 0.12, 0]}
+          fontSize={0.08}
           color="#00ff00"
-          anchorX="left"
-          anchorY="middle"
-          rotation={[0, 0, Math.PI / 2]}
+          anchorX="center"
+          anchorY="bottom"
         >
-          UP
+          Y
         </Text>
       </group>
 
-      {/* Right arrow (Z-axis - Yaw) */}
-      <group position={[0, 0.03, 0.4]} rotation={[-Math.PI / 2, 0, 0]}>
-        <mesh>
-          <coneGeometry args={[0.05, 0.15, 8]} />
+      {/* Z-axis - Pointing direction (Blue) */}
+      <group position={[0, 0, -0.1]} rotation={[MOUNTING_OFFSET_PITCH, 0, 0]}>
+        <mesh rotation={[Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.03, 0.12, 8]} />
           <meshStandardMaterial color="#0000ff" emissive="#0000ff" emissiveIntensity={0.5} />
         </mesh>
         <Text
-          position={[0, 0.15, 0]}
-          fontSize={0.1}
+          position={[0, 0, -0.12]}
+          fontSize={0.08}
           color="#0000ff"
           anchorX="center"
-          anchorY="bottom"
+          anchorY="top"
           rotation={[Math.PI / 2, 0, 0]}
         >
-          RIGHT
+          Z
         </Text>
       </group>
     </group>
   )
 }
 
-// Reference ground plane and axes
+// Reference ground plane and axes with compass
 function ReferenceFrame() {
   return (
     <>
@@ -105,33 +179,66 @@ function ReferenceFrame() {
         fadeStrength={1}
       />
 
+      {/* Compass rose on ground */}
+      <group position={[0, 0.01, 0]}>
+        {/* North (Z+) */}
+        <Text position={[0, 0, 1.5]} fontSize={0.15} color="#ffffff" anchorX="center" anchorY="middle" rotation={[-Math.PI / 2, 0, 0]}>
+          N
+        </Text>
+        <mesh position={[0, 0, 1.2]} rotation={[-Math.PI / 2, 0, 0]}>
+          <coneGeometry args={[0.05, 0.15, 8]} />
+          <meshBasicMaterial color="#ffffff" />
+        </mesh>
+
+        {/* South (Z-) */}
+        <Text position={[0, 0, -1.5]} fontSize={0.15} color="#888888" anchorX="center" anchorY="middle" rotation={[-Math.PI / 2, 0, 0]}>
+          S
+        </Text>
+
+        {/* East (X+) */}
+        <Text position={[1.5, 0, 0]} fontSize={0.15} color="#aaaaaa" anchorX="center" anchorY="middle" rotation={[-Math.PI / 2, 0, 0]}>
+          E
+        </Text>
+
+        {/* West (X-) */}
+        <Text position={[-1.5, 0, 0]} fontSize={0.15} color="#aaaaaa" anchorX="center" anchorY="middle" rotation={[-Math.PI / 2, 0, 0]}>
+          W
+        </Text>
+
+        {/* Compass circle */}
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
+          <ringGeometry args={[1.1, 1.15, 64]} />
+          <meshBasicMaterial color="#666666" transparent opacity={0.3} />
+        </mesh>
+      </group>
+
       {/* World coordinate axes */}
       <group position={[-2, 0, -2]}>
-        {/* X axis */}
+        {/* X axis - East */}
         <mesh position={[0.25, 0.01, 0]}>
           <boxGeometry args={[0.5, 0.02, 0.02]} />
           <meshBasicMaterial color="#ff0000" />
         </mesh>
         <Text position={[0.6, 0.01, 0]} fontSize={0.1} color="#ff0000">
-          X
+          X (East)
         </Text>
 
-        {/* Y axis */}
+        {/* Y axis - Up */}
         <mesh position={[0, 0.26, 0]}>
           <boxGeometry args={[0.02, 0.5, 0.02]} />
           <meshBasicMaterial color="#00ff00" />
         </mesh>
         <Text position={[0, 0.6, 0]} fontSize={0.1} color="#00ff00">
-          Y
+          Y (Up)
         </Text>
 
-        {/* Z axis */}
+        {/* Z axis - North */}
         <mesh position={[0, 0.01, 0.25]}>
           <boxGeometry args={[0.02, 0.02, 0.5]} />
           <meshBasicMaterial color="#0000ff" />
         </mesh>
         <Text position={[0, 0.01, 0.6]} fontSize={0.1} color="#0000ff">
-          Z
+          Z (North)
         </Text>
       </group>
     </>
@@ -167,9 +274,9 @@ export function IMU3DVisualizer({ roll: propRoll, pitch: propPitch, yaw: propYaw
   return (
     <div className="w-full h-full">
       <Canvas
-        camera={{ position: [2, 2, 2], fov: 50 }}
+        camera={{ position: [2.5, 2, 2.5], fov: 50 }}
         gl={{
-          antialias: false,  // Disable antialiasing for better performance
+          antialias: true,  // Enable for better dish appearance
           powerPreference: 'low-power',  // Use low-power GPU mode
           preserveDrawingBuffer: true  // Prevent context loss
         }}
@@ -177,7 +284,7 @@ export function IMU3DVisualizer({ roll: propRoll, pitch: propPitch, yaw: propYaw
       >
         <Lighting />
         <ReferenceFrame />
-        <IMUSensorBoard roll={roll} pitch={pitch} yaw={yaw} />
+        <AntennaDishWithIMU roll={roll} pitch={pitch} yaw={yaw} />
 
         <OrbitControls
           enableZoom={true}
