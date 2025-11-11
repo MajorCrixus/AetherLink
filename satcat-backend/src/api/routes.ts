@@ -21,6 +21,28 @@ export const router = express.Router();
 // Track ingest status
 let ingestInProgress = false;
 let lastIngestResult: any = null;
+let ingestLogs: Array<{
+  timestamp: string;
+  type: 'info' | 'request' | 'response' | 'error';
+  message: string;
+  details?: any;
+}> = [];
+
+// Export function to add logs (called by ingest services)
+export function addIngestLog(type: 'info' | 'request' | 'response' | 'error', message: string, details?: any) {
+  const log = {
+    timestamp: new Date().toISOString(),
+    type,
+    message,
+    details,
+  };
+  ingestLogs.push(log);
+
+  // Keep only last 100 logs to avoid memory issues
+  if (ingestLogs.length > 100) {
+    ingestLogs = ingestLogs.slice(-100);
+  }
+}
 
 /**
  * GET /satellites
@@ -41,7 +63,7 @@ router.get('/satellites', async (req: Request, res: Response) => {
       band,
       purpose,
       owner,
-      limit = '100',
+      limit = '50000',
     } = req.query;
 
     // Build dynamic SQL query
@@ -444,6 +466,9 @@ router.post('/ingest/start', async (_req: Request, res: Response): Promise<void>
 
     // Start ingest in background
     ingestInProgress = true;
+    ingestLogs = []; // Clear previous logs
+    addIngestLog('info', '=== Starting database ingest ===');
+
     res.json({
       status: 'started',
       message: 'Database ingest started. Check /api/ingest/status for progress.',
@@ -516,18 +541,23 @@ router.get('/ingest/status', async (_req: Request, res: Response): Promise<void>
       res.json({
         status: 'in_progress',
         message: 'Database ingest is currently running',
+        logs: ingestLogs,
       });
       return;
     }
 
     if (lastIngestResult) {
-      res.json(lastIngestResult);
+      res.json({
+        ...lastIngestResult,
+        logs: ingestLogs,
+      });
       return;
     }
 
     res.json({
       status: 'idle',
       message: 'No ingest has been run yet',
+      logs: [],
     });
   } catch (error) {
     console.error('[API] /ingest/status error:', error);

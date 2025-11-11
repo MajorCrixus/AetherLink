@@ -73,6 +73,14 @@ else
     echo -e "  ${BLUE}ℹ${NC} No saved frontend PID"
 fi
 
+if [ -f "temp/satcat-backend.pid" ]; then
+    SATCAT_PID=$(cat temp/satcat-backend.pid)
+    kill_process "$SATCAT_PID" "Satcat Backend"
+    rm -f temp/satcat-backend.pid
+else
+    echo -e "  ${BLUE}ℹ${NC} No saved satcat-backend PID"
+fi
+
 # Fallback: kill by name
 echo ""
 echo -e "${BLUE}Checking for any remaining processes...${NC}"
@@ -93,6 +101,14 @@ if pgrep -f "vite" > /dev/null; then
     echo -e "  ${GREEN}✓${NC} Cleaned up frontend processes"
 fi
 
+# Kill any remaining satcat-backend processes
+if pgrep -f "node.*satcat-backend.*server.js" > /dev/null; then
+    echo -e "  ${YELLOW}Found remaining satcat-backend processes${NC}"
+    pkill -f "node.*satcat-backend.*server.js"
+    sleep 1
+    echo -e "  ${GREEN}✓${NC} Cleaned up satcat-backend processes"
+fi
+
 # Check ports
 echo ""
 echo -e "${BLUE}Checking ports...${NC}"
@@ -109,6 +125,13 @@ if lsof -Pi :3001 -sTCP:LISTEN -t >/dev/null 2>&1; then
     lsof -Pi :3001 -sTCP:LISTEN
 else
     echo -e "  ${GREEN}✓${NC} Port 3001 is free"
+fi
+
+if lsof -Pi :9001 -sTCP:LISTEN -t >/dev/null 2>&1; then
+    echo -e "  ${RED}✗${NC} Port 9001 still in use"
+    lsof -Pi :9001 -sTCP:LISTEN
+else
+    echo -e "  ${GREEN}✓${NC} Port 9001 is free"
 fi
 
 echo ""

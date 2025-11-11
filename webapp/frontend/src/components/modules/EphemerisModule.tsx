@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
-import { Radio, RefreshCw, CheckCircle, XCircle, Loader2, Database } from 'lucide-react'
+import { Radio, RefreshCw, CheckCircle, XCircle, Loader2, Database, Terminal } from 'lucide-react'
 
 interface IngestStatus {
   status: 'idle' | 'in_progress' | 'completed' | 'failed'
@@ -19,6 +19,13 @@ interface IngestStatus {
   }
   errors?: string[]
   error?: string
+  logs?: LogEntry[]
+}
+
+interface LogEntry {
+  timestamp: string
+  type: 'request' | 'response' | 'error' | 'info'
+  message: string
 }
 
 const SATCAT_API = 'http://192.168.68.135:9001/api'
@@ -26,6 +33,22 @@ const SATCAT_API = 'http://192.168.68.135:9001/api'
 export function EphemerisModule() {
   const [status, setStatus] = useState<IngestStatus>({ status: 'idle' })
   const [isPolling, setIsPolling] = useState(false)
+  const [logs, setLogs] = useState<LogEntry[]>([])
+  const logsEndRef = useRef<HTMLDivElement>(null)
+
+  // Add log entry
+  const addLog = (type: LogEntry['type'], message: string) => {
+    setLogs(prev => [...prev, {
+      timestamp: new Date().toISOString(),
+      type,
+      message
+    }])
+  }
+
+  // Auto-scroll to bottom of logs
+  useEffect(() => {
+    logsEndRef.current?.scrollIntoView({ behavior: 'smooth' })
+  }, [logs])
 
   // Poll for status when ingest is running
   useEffect(() => {
@@ -37,6 +60,11 @@ export function EphemerisModule() {
         const data: IngestStatus = await response.json()
         setStatus(data)
 
+        // Update logs from server
+        if (data.logs && Array.isArray(data.logs)) {
+          setLogs(data.logs)
+        }
+
         // Stop polling when complete or failed
         if (data.status === 'completed' || data.status === 'failed') {
           setIsPolling(false)
@@ -44,14 +72,36 @@ export function EphemerisModule() {
       } catch (error) {
         console.error('Error fetching ingest status:', error)
       }
-    }, 2000) // Poll every 2 seconds
+    }, 1000) // Poll every second for real-time updates
 
     return () => clearInterval(interval)
   }, [isPolling])
 
-  // Load initial status on mount
+  // Load initial status on mount and start polling if ingest is in progress
   useEffect(() => {
-    fetchStatus()
+    const loadInitialStatus = async () => {
+      try {
+        const response = await fetch(`${SATCAT_API}/ingest/status`)
+        const data: IngestStatus = await response.json()
+        setStatus(data)
+
+        // If there are server-side logs, display them
+        if (data.logs && Array.isArray(data.logs)) {
+          setLogs(data.logs)
+        }
+
+        // Auto-start polling if ingest is already in progress
+        if (data.status === 'in_progress') {
+          setIsPolling(true)
+        }
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error)
+        addLog('error', `Failed to fetch status: ${errorMsg}`)
+        console.error('Error fetching status:', error)
+      }
+    }
+
+    loadInitialStatus()
   }, [])
 
   const fetchStatus = async () => {
@@ -59,7 +109,14 @@ export function EphemerisModule() {
       const response = await fetch(`${SATCAT_API}/ingest/status`)
       const data: IngestStatus = await response.json()
       setStatus(data)
+
+      // If there are server-side logs, display them
+      if (data.logs && Array.isArray(data.logs)) {
+        setLogs(data.logs)
+      }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      addLog('error', `Failed to fetch status: ${errorMsg}`)
       console.error('Error fetching status:', error)
     }
   }
@@ -78,12 +135,18 @@ export function EphemerisModule() {
       }
 
       if (!response.ok) {
+        const errorText = await response.text()
+        addLog('error', `Failed to start ingest: ${response.status} - ${errorText}`)
         throw new Error('Failed to start ingest')
       }
 
+      const data = await response.json()
       setStatus({ status: 'in_progress', message: 'Starting database ingest...' })
+      setLogs([]) // Clear previous logs
       setIsPolling(true)
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error)
+      addLog('error', `Error starting ingest: ${errorMsg}`)
       console.error('Error starting ingest:', error)
       alert('Failed to start ingest')
     }
@@ -226,7 +289,7 @@ export function EphemerisModule() {
         </div>
 
         {/* Information Panel */}
-        <div className="panel">
+        <div className="panel mb-6">
           <div className="panel-content">
             <h3 className="text-lg font-semibold mb-3">About</h3>
             <div className="text-sm text-muted-foreground space-y-2">
@@ -245,6 +308,53 @@ export function EphemerisModule() {
                 Note: Updates use delta/incremental mode by default, only fetching new or changed data since the last update.
                 This respects Space-Track.org API rate limits.
               </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Debug Console */}
+        <div className="panel">
+          <div className="panel-content">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <Terminal className="w-5 h-5" />
+                <h3 className="text-lg font-semibold">Debug Console</h3>
+                {isPolling && (
+                  <div className="flex items-center gap-1.5 text-xs text-green-400">
+                    <div className="w-2 h-2 bg-green-400 rounded-full animate-pulse" />
+                    <span>LIVE</span>
+                  </div>
+                )}
+              </div>
+              <button
+                onClick={() => setLogs([])}
+                className="btn btn-secondary text-sm"
+              >
+                Clear Logs
+              </button>
+            </div>
+            <div className="bg-black rounded-lg p-4 font-mono text-sm h-64 overflow-y-auto">
+              {logs.length === 0 ? (
+                <div className="text-gray-500 text-center mt-8">
+                  No logs yet. Click "Update Database" to see API requests and responses.
+                </div>
+              ) : (
+                logs.map((log, i) => (
+                  <div
+                    key={i}
+                    className={`mb-1 ${
+                      log.type === 'error' ? 'text-red-400' :
+                      log.type === 'request' ? 'text-blue-400' :
+                      log.type === 'response' ? 'text-green-400' :
+                      'text-gray-300'
+                    }`}
+                  >
+                    <span className="text-gray-500">[{new Date(log.timestamp).toLocaleTimeString()}]</span>{' '}
+                    {log.message}
+                  </div>
+                ))
+              )}
+              <div ref={logsEndRef} />
             </div>
           </div>
         </div>

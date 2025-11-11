@@ -17,6 +17,7 @@
  */
 
 import { spaceTrackClient } from '../utils/rateLimit.js';
+import { addIngestLog } from '../api/routes.js';
 
 const BASE_URL = 'https://www.space-track.org';
 
@@ -166,6 +167,7 @@ export class SpaceTrackClient {
     }
 
     console.log(`[SpaceTrack] Logging in as ${username}...`);
+    addIngestLog('request', `POST /ajaxauth/login (username: ${username})`);
 
     // Space-Track uses form-encoded POST for login
     const formData = new URLSearchParams();
@@ -180,20 +182,36 @@ export class SpaceTrackClient {
       body: formData.toString(),
     });
 
+    addIngestLog('response', `HTTP ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`Space-Track login failed: ${response.status} ${response.statusText}`);
+      const error = `Space-Track login failed: ${response.status} ${response.statusText}`;
+      addIngestLog('error', error);
+      throw new Error(error);
     }
 
     // Extract cookies from Set-Cookie headers
     const setCookie = response.headers.get('set-cookie');
     if (!setCookie) {
-      throw new Error('Space-Track login did not return session cookies');
+      const error = 'Space-Track login did not return session cookies';
+      addIngestLog('error', error);
+      throw new Error(error);
     }
 
-    this.cookies = setCookie;
+    // Parse cookie: extract only "name=value" part, strip metadata (Path, HttpOnly, expires, etc.)
+    // Set-Cookie format: "name=value; Path=/; HttpOnly; expires=..."
+    // We only need: "name=value" for the Cookie header
+    const cookieValue = setCookie.split(';')[0].trim();
+
+    this.cookies = cookieValue;
     this.loginTime = Date.now();
 
     console.log('[SpaceTrack] Login successful');
+    console.log('[SpaceTrack] Raw Set-Cookie header:', setCookie.substring(0, 100));
+    console.log('[SpaceTrack] Parsed cookie (name=value only):', cookieValue);
+    addIngestLog('info', 'Login successful - session established');
+    addIngestLog('info', `Raw Set-Cookie: ${setCookie.substring(0, 80)}...`);
+    addIngestLog('info', `Parsed cookie: ${cookieValue}`);
   }
 
   /**
@@ -246,20 +264,30 @@ export class SpaceTrackClient {
     const url = `${BASE_URL}/basicspacedata/query/class/satcat${predicateStr}/orderby/NORAD_CAT_ID${limitStr}/format/json`;
 
     console.log(`[SpaceTrack] Querying SATCAT with ${predicates.length} predicates${params.limit ? ` (limit ${params.limit})` : ' (no limit)'}`);
+    addIngestLog('request', `GET ${url.replace(BASE_URL, '')}`);
+
+    const cookieToSend = this.cookies || '';
+    console.log('[SpaceTrack] Sending cookie (first 100 chars):', cookieToSend.substring(0, 100));
+    addIngestLog('info', `Using session cookie: ${cookieToSend.substring(0, 50)}... (${cookieToSend.length} chars)`);
 
     const response = await spaceTrackClient.fetch(url, {
       method: 'GET',
       headers: {
-        'Cookie': this.cookies || '',
+        'Cookie': cookieToSend,
       },
     });
 
+    addIngestLog('response', `HTTP ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`SATCAT query failed: ${response.status} ${response.statusText}`);
+      const error = `SATCAT query failed: ${response.status} ${response.statusText}`;
+      addIngestLog('error', error);
+      throw new Error(error);
     }
 
     const data = await response.json() as SatcatEntry[];
     console.log(`[SpaceTrack] SATCAT query returned ${data.length} entries`);
+    addIngestLog('info', `Received ${data.length} SATCAT records`);
 
     return data;
   }
@@ -357,6 +385,7 @@ export class SpaceTrackClient {
     const url = `${BASE_URL}/basicspacedata/query/class/gp${predicateStr}/orderby/NORAD_CAT_ID,EPOCH desc${limitStr}/format/json`;
 
     console.log(`[SpaceTrack] Querying GP with ${predicates.length} predicates${params.limit ? ` (limit ${params.limit})` : ' (no limit)'}`);
+    addIngestLog('request', `GET ${url.replace(BASE_URL, '')}`);
 
     const response = await spaceTrackClient.fetch(url, {
       method: 'GET',
@@ -365,14 +394,75 @@ export class SpaceTrackClient {
       },
     });
 
+    addIngestLog('response', `HTTP ${response.status} ${response.statusText}`);
+
     if (!response.ok) {
-      throw new Error(`GP query failed: ${response.status} ${response.statusText}`);
+      const error = `GP query failed: ${response.status} ${response.statusText}`;
+      addIngestLog('error', error);
+      throw new Error(error);
     }
 
     const data = await response.json() as GPEntry[];
     console.log(`[SpaceTrack] GP query returned ${data.length} entries`);
+    addIngestLog('info', `Received ${data.length} GP records`);
 
     return data;
+  }
+
+  /**
+   * Query ALL satellites using tle_latest with ORDINAL/1 (PROVEN WORKING)
+   *
+   * This is the FASTEST and MOST RELIABLE way to get all active satellites in ONE request.
+   * Based on the proven working pattern from SLTrack.py.
+   *
+   * Query: /class/tle_latest/ORDINAL/1/format/json
+   * Returns: ~64,000+ satellites with TLE data + metadata in 10-15 seconds
+   *
+   * Note: tle_latest does NOT have DECAY_DATE field, but has DECAYED (0/1)
+   */
+  async queryAllSatellitesLatestTLE(): Promise<TleEntry[]> {
+    await this.ensureLoggedIn();
+
+    // PROVEN WORKING QUERY - no DECAY_DATE filter (doesn't exist in tle_latest)
+    const url = `${BASE_URL}/basicspacedata/query/class/tle_latest/ORDINAL/1/format/json`;
+
+    console.log(`[SpaceTrack] Fetching ALL satellites using tle_latest (ORDINAL/1)`);
+    addIngestLog('info', 'Using proven query pattern: /class/tle_latest/ORDINAL/1');
+    addIngestLog('request', `GET /basicspacedata/query/class/tle_latest/ORDINAL/1/format/json`);
+
+    const startTime = Date.now();
+    const response = await spaceTrackClient.fetch(url, {
+      method: 'GET',
+      headers: {
+        'Cookie': this.cookies || '',
+      },
+    });
+
+    const elapsed = Date.now() - startTime;
+    console.log(`[SpaceTrack] Request completed in ${elapsed}ms`);
+
+    addIngestLog('response', `HTTP ${response.status} ${response.statusText} (${elapsed}ms)`);
+
+    if (!response.ok) {
+      const error = `tle_latest query failed: ${response.status} ${response.statusText}`;
+      addIngestLog('error', error);
+      throw new Error(error);
+    }
+
+    const data = await response.json() as TleEntry[];
+    console.log(`[SpaceTrack] Received ${data.length} satellites`);
+    addIngestLog('info', `✓ Received ${data.length} satellites in ONE request`);
+
+    // Filter out decayed satellites (DECAYED field exists in tle_latest)
+    const activeSatellites = data.filter(sat => {
+      // @ts-ignore - DECAYED field exists but not in our type definition
+      return sat.DECAYED === 0 || sat.DECAYED === '0' || sat.DECAYED === null;
+    });
+
+    console.log(`[SpaceTrack] Filtered to ${activeSatellites.length} active (non-decayed) satellites`);
+    addIngestLog('info', `Filtered to ${activeSatellites.length} active satellites (DECAYED=0)`);
+
+    return activeSatellites;
   }
 
   /**

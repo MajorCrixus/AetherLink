@@ -12,6 +12,7 @@
 import { spaceTrack } from '../integrations/spacetrack.js';
 import { pool } from '../db/client.js';
 import type { SatcatEntry, GPEntry } from '../integrations/spacetrack.js';
+import { addIngestLog } from '../api/routes.js';
 
 /**
  * Ingest options
@@ -224,77 +225,81 @@ export async function ingestSpaceTrackData(
 
   try {
     // Login to Space-Track
+    addIngestLog('info', 'Logging in to Space-Track.org...');
     await spaceTrack.login();
+    addIngestLog('info', 'Login successful');
 
     // =========================================================================
-    // STEP 1: Ingest SATCAT data
+    // Fetch ALL satellites with latest TLEs in ONE request (PROVEN WORKING)
     // =========================================================================
-    console.log('[SpaceTrack Ingest] Fetching SATCAT...');
-    console.log('[SpaceTrack Ingest] Query: all on-orbit payloads (DECAY_DATE=null, OBJECT_TYPE=PAYLOAD)');
+    console.log('[SpaceTrack Ingest] Fetching all satellites with latest TLEs...');
+    addIngestLog('info', 'Fetching ALL satellites using proven query pattern');
+    addIngestLog('info', 'Query: /class/tle_latest/ORDINAL/1/format/json');
 
-    // Use the proven query: all on-orbit payloads
-    // Space-Track recommends: run SATCAT once daily after 17:00 UTC
-    const satcatParams = {
-      current_only: true,
-      object_types: ['PAYLOAD'],  // Only active satellites, no debris/rocket bodies
-      // Note: Will add DECAY_DATE/null-val filter in querySatcat
-    };
+    // This proven query fetches ~64,000+ satellites in ONE request (~10-15 seconds)
+    // Includes TLE data + satellite metadata
+    const satellitesWithTles = await spaceTrack.queryAllSatellitesLatestTLE();
 
-    const satcatEntries = await spaceTrack.querySatcat(satcatParams);
-    console.log(`[SpaceTrack Ingest] Fetched ${satcatEntries.length} SATCAT entries`);
+    console.log(`[SpaceTrack Ingest] Fetched ${satellitesWithTles.length} satellites`);
+    addIngestLog('info', `✓ Received ${satellitesWithTles.length} satellites with TLEs in ONE request`);
 
-    // Process SATCAT entries
-    for (const entry of satcatEntries) {
+    // =========================================================================
+    // Process satellites and TLEs
+    // =========================================================================
+    addIngestLog('info', 'Processing satellite data and TLEs...');
+
+    for (const entry of satellitesWithTles) {
       try {
-        const action = await upsertSatellite(entry);
+        // tle_latest returns more fields than TleEntry type - cast to any
+        const tleData = entry as any;
+
+        // Convert TLE entry to SATCAT format for satellite table
+        const satcatEntry: any = {
+          NORAD_CAT_ID: entry.NORAD_CAT_ID,
+          OBJECT_NAME: entry.OBJECT_NAME,
+          OBJECT_ID: entry.OBJECT_ID || tleData.INTLDES || '',
+          OBJECT_TYPE: tleData.OBJECT_TYPE || 'UNKNOWN',
+          COUNTRY: '',  // Not in TLE, will be null
+          LAUNCH_DATE: '',  // Not in TLE, will be null
+          SITE: '',  // Not in TLE, will be null
+          DECAY_DATE: null,  // Filtered to active satellites only
+          PERIOD: tleData.PERIOD || '',
+          INCLINATION: entry.INCLINATION,
+          APOGEE: tleData.APOGEE || tleData.PERIGEE || '',
+          PERIGEE: tleData.PERIGEE || '',
+          RCS_SIZE: '',  // Not in TLE
+        };
+
+        // Upsert satellite
+        const action = await upsertSatellite(satcatEntry);
         if (action === 'inserted') {
           result.satellites.inserted++;
         } else {
           result.satellites.updated++;
         }
-      } catch (error) {
-        const msg = `Failed to upsert satellite ${entry.NORAD_CAT_ID}: ${error instanceof Error ? error.message : error}`;
-        console.error(`[SpaceTrack Ingest] ${msg}`);
-        result.errors.push(msg);
-      }
-    }
 
-    await updateIngestState('spacetrack_satcat', satcatEntries.length);
-
-    // =========================================================================
-    // STEP 2: Ingest GP (General Perturbations) data
-    // =========================================================================
-    console.log('[SpaceTrack Ingest] Fetching GP elements...');
-    console.log('[SpaceTrack Ingest] Query: all on-orbit objects (DECAY_DATE=null)');
-
-    // Use the modern GP class instead of deprecated tle_latest
-    // Space-Track recommends: GP/TLE max once per hour (we're running daily)
-    const gpParams = {
-      on_orbit_only: true,  // DECAY_DATE/null-val
-    };
-
-    const tleEntries = await spaceTrack.queryGP(gpParams);
-    console.log(`[SpaceTrack Ingest] Fetched ${tleEntries.length} TLE entries`);
-
-    // Process TLE entries
-    for (const entry of tleEntries) {
-      try {
-        await insertTle(entry);
+        // Insert TLE (cast to any since tle_latest has extra fields)
+        await insertTle(tleData);
         result.tles.inserted++;
+
       } catch (error) {
-        const msg = `Failed to insert TLE for ${entry.NORAD_CAT_ID}: ${error instanceof Error ? error.message : error}`;
+        const msg = `Failed to process satellite ${entry.NORAD_CAT_ID}: ${error instanceof Error ? error.message : error}`;
         console.error(`[SpaceTrack Ingest] ${msg}`);
         result.errors.push(msg);
       }
     }
 
-    await updateIngestState('spacetrack_tle', tleEntries.length);
+    await updateIngestState('spacetrack_combined', satellitesWithTles.length);
+    addIngestLog('info', `✓ Processed satellites: ${result.satellites.inserted} inserted, ${result.satellites.updated} updated`);
+    addIngestLog('info', `✓ Processed TLEs: ${result.tles.inserted} inserted`);
 
     console.log('[SpaceTrack Ingest] Complete:', result);
+    addIngestLog('info', '=== Ingest complete ===');
 
   } catch (error) {
     const msg = `Ingest failed: ${error instanceof Error ? error.message : error}`;
     console.error(`[SpaceTrack Ingest] ${msg}`);
+    addIngestLog('error', msg, { error: error instanceof Error ? error.stack : String(error) });
     result.errors.push(msg);
     throw error;
   }

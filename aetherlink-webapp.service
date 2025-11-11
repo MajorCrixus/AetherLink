@@ -1,0 +1,30 @@
+[Unit]
+Description=AetherLink SATCOM Webapp
+After=network.target postgresql.service
+Wants=postgresql.service
+
+[Service]
+Type=forking
+User=major
+Group=major
+WorkingDirectory=/home/major/aetherlink
+
+# Use the existing start script
+ExecStart=/home/major/aetherlink/start-webapp.sh
+ExecStop=/home/major/aetherlink/stop-webapp.sh
+
+# Restart on failure
+Restart=on-failure
+RestartSec=10
+
+# Environment
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin"
+Environment="NODE_ENV=production"
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=aetherlink-webapp
+
+[Install]
+WantedBy=multi-user.target

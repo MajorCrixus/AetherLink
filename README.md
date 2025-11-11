@@ -101,6 +101,38 @@ aetherlink/
 ./restart-webapp.sh
 ```
 
+**Auto-start on boot (systemd):**
+```bash
+# Install the service
+sudo cp /home/major/aetherlink/aetherlink-webapp.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable aetherlink-webapp.service
+
+# Start the service now
+sudo systemctl start aetherlink-webapp.service
+
+# Check service status
+sudo systemctl status aetherlink-webapp.service
+```
+
+**Systemd service management:**
+```bash
+# View logs
+sudo journalctl -u aetherlink-webapp.service -f
+
+# Stop the service
+sudo systemctl stop aetherlink-webapp.service
+
+# Restart the service
+sudo systemctl restart aetherlink-webapp.service
+
+# Disable autostart
+sudo systemctl disable aetherlink-webapp.service
+
+# Check if enabled
+systemctl is-enabled aetherlink-webapp.service
+```
+
 ### Access URLs
 
 - **Frontend**: http://localhost:3001 (or your Pi's IP)

@@ -113,7 +113,16 @@ export class RateLimitedClient {
 
         // Handle server errors (5xx) with exponential backoff
         if (response.status >= 500) {
-          console.warn(`[RateLimitedClient] Server error ${response.status}. Backing off ${backoffMs}ms.`);
+          // Try to get response body for debugging
+          let errorBody = '';
+          try {
+            errorBody = await response.text();
+            console.warn(`[RateLimitedClient] Server error ${response.status}. Response body: ${errorBody.substring(0, 200)}`);
+          } catch {
+            console.warn(`[RateLimitedClient] Server error ${response.status}. Could not read response body.`);
+          }
+
+          console.warn(`[RateLimitedClient] Backing off ${backoffMs}ms before retry.`);
           await sleep(backoffMs);
           backoffMs = Math.min(backoffMs * 2, this.config.maxBackoffMs);
           attempt++;

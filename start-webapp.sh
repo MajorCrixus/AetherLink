@@ -11,6 +11,7 @@ set -e
 
 BACKEND_PORT=9000
 FRONTEND_PORT=3001
+SATCAT_PORT=9001
 PROJECT_DIR="/home/major/aetherlink"
 
 # Colors for output
@@ -305,6 +306,135 @@ fi
 echo ""
 
 # ============================================================================
+# PostgreSQL Database Check
+# ============================================================================
+
+print_section "Checking PostgreSQL Database"
+
+# Check if PostgreSQL is running
+if systemctl is-active --quiet postgresql 2>/dev/null; then
+    print_success "PostgreSQL is running"
+else
+    print_warning "PostgreSQL is not running"
+    print_info "Starting PostgreSQL..."
+
+    if sudo systemctl start postgresql 2>/dev/null; then
+        print_success "PostgreSQL started"
+    else
+        print_error "Failed to start PostgreSQL"
+        print_info "Install with: sudo apt install postgresql"
+        exit 1
+    fi
+fi
+
+# Test database connection
+if sudo -u postgres psql -c '\l' > /dev/null 2>&1; then
+    print_success "Database connection verified"
+else
+    print_warning "Could not verify database connection"
+fi
+
+echo ""
+
+# ============================================================================
+# Satcat Backend Port Check (Port 9001)
+# ============================================================================
+
+print_section "Checking Satcat Backend Port ($SATCAT_PORT)"
+
+if ! check_port_available $SATCAT_PORT; then
+    print_warning "Port $SATCAT_PORT is already in use"
+
+    # Show what's using it
+    echo -e "${YELLOW}    Process using port $SATCAT_PORT:${NC}"
+    get_port_process $SATCAT_PORT | while read line; do
+        echo "      $line"
+    done
+    echo ""
+
+    read -p "    Kill existing process and continue? (y/n) " -n 1 -r
+    echo
+
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        kill_port $SATCAT_PORT
+
+        if check_port_available $SATCAT_PORT; then
+            print_success "Port $SATCAT_PORT is now available"
+        else
+            print_error "Failed to free port $SATCAT_PORT"
+            exit 1
+        fi
+    else
+        print_error "Cannot continue with port $SATCAT_PORT in use"
+        exit 1
+    fi
+else
+    print_success "Port $SATCAT_PORT is available"
+fi
+
+echo ""
+
+# ============================================================================
+# Start Satcat Backend
+# ============================================================================
+
+print_section "Starting Satcat Backend (Node.js on port $SATCAT_PORT)"
+
+# Check if satcat-backend exists
+if [ ! -d "satcat-backend" ]; then
+    print_warning "satcat-backend directory not found"
+    print_info "Skipping satcat-backend startup"
+else
+    # Check if node_modules exists
+    if [ ! -d "satcat-backend/node_modules" ]; then
+        print_info "Installing satcat-backend dependencies..."
+        cd satcat-backend
+        npm install
+        cd ..
+        print_success "Dependencies installed"
+    fi
+
+    # Build if needed
+    if [ ! -d "satcat-backend/dist" ] || [ "satcat-backend/src" -nt "satcat-backend/dist" ]; then
+        print_info "Building satcat-backend..."
+        cd satcat-backend
+        npm run build
+        cd ..
+        print_success "Build complete"
+    fi
+
+    # Start satcat-backend
+    print_info "Starting satcat-backend server..."
+    cd satcat-backend
+    npm start > ../temp/satcat-backend.log 2>&1 &
+    SATCAT_PID=$!
+    cd ..
+
+    # Wait for startup
+    sleep 3
+
+    # Check if running
+    if ps -p $SATCAT_PID > /dev/null; then
+        print_success "Satcat backend started (PID: $SATCAT_PID)"
+        print_info "Satcat logs: $PROJECT_DIR/temp/satcat-backend.log"
+
+        # Try to connect
+        if curl -s http://localhost:$SATCAT_PORT/api/health > /dev/null 2>&1; then
+            print_success "Satcat backend responding on http://localhost:$SATCAT_PORT"
+        else
+            print_warning "Satcat backend started but not responding yet (may still be initializing)"
+        fi
+    else
+        print_error "Satcat backend failed to start"
+        print_info "Check logs: tail -f temp/satcat-backend.log"
+        # Don't exit - continue without satcat-backend
+        SATCAT_PID=""
+    fi
+fi
+
+echo ""
+
+# ============================================================================
 # Start Backend
 # ============================================================================
 
@@ -405,24 +535,35 @@ echo ""
 echo -e "${BOLD}From this computer:${NC}"
 echo -e "  Frontend:    ${GREEN}http://localhost:$FRONTEND_PORT${NC}"
 echo -e "  Backend:     ${GREEN}http://localhost:$BACKEND_PORT${NC}"
+echo -e "  Satcat API:  ${GREEN}http://localhost:$SATCAT_PORT${NC}"
 echo -e "  Swagger API: ${GREEN}http://localhost:$BACKEND_PORT/docs${NC}"
 echo ""
 echo -e "${BOLD}From other computers on your network:${NC}"
 echo -e "  Frontend:    ${GREEN}http://$IP_ADDR:$FRONTEND_PORT${NC}"
 echo -e "  Backend:     ${GREEN}http://$IP_ADDR:$BACKEND_PORT${NC}"
+echo -e "  Satcat API:  ${GREEN}http://$IP_ADDR:$SATCAT_PORT${NC}"
 echo -e "  Swagger API: ${GREEN}http://$IP_ADDR:$BACKEND_PORT/docs${NC}"
 echo ""
 echo -e "${BOLD}Process IDs:${NC}"
-echo -e "  Backend PID:  $BACKEND_PID"
-echo -e "  Frontend PID: $FRONTEND_PID"
+echo -e "  Backend PID:     $BACKEND_PID"
+echo -e "  Frontend PID:    $FRONTEND_PID"
+if [ -n "$SATCAT_PID" ]; then
+    echo -e "  Satcat Backend:  $SATCAT_PID"
+fi
 echo ""
 echo -e "${BOLD}Logs:${NC}"
-echo -e "  Backend:  tail -f $PROJECT_DIR/temp/backend.log"
-echo -e "  Frontend: tail -f $PROJECT_DIR/temp/frontend.log"
+echo -e "  Backend:        tail -f $PROJECT_DIR/temp/backend.log"
+echo -e "  Frontend:       tail -f $PROJECT_DIR/temp/frontend.log"
+if [ -n "$SATCAT_PID" ]; then
+    echo -e "  Satcat Backend: tail -f $PROJECT_DIR/temp/satcat-backend.log"
+fi
 echo ""
 echo -e "${BOLD}To stop:${NC}"
 echo -e "  Kill backend:  kill $BACKEND_PID"
 echo -e "  Kill frontend: kill $FRONTEND_PID"
+if [ -n "$SATCAT_PID" ]; then
+    echo -e "  Kill satcat:   kill $SATCAT_PID"
+fi
 echo -e "  Or use:        ./stop-webapp.sh"
 echo ""
 echo -e "${YELLOW}Note: Processes are running in background. Close this terminal safely.${NC}"
@@ -432,6 +573,9 @@ echo ""
 # Save PIDs for easy stopping later
 echo "$BACKEND_PID" > temp/backend.pid
 echo "$FRONTEND_PID" > temp/frontend.pid
+if [ -n "$SATCAT_PID" ]; then
+    echo "$SATCAT_PID" > temp/satcat-backend.pid
+fi
 
 print_success "Startup script complete!"
 echo ""

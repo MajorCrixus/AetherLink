@@ -1,6 +1,18 @@
 import React, { useEffect, useState } from 'react'
-import { motion } from 'framer-motion'
-import { Database, RefreshCw, Search, CheckCircle, XCircle, AlertCircle, Satellite } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
+import {
+  Database,
+  RefreshCw,
+  Search,
+  CheckCircle,
+  XCircle,
+  AlertCircle,
+  Satellite,
+  ChevronDown,
+  ChevronRight,
+  Filter,
+  X
+} from 'lucide-react'
 import {
   fetchSatellites,
   fetchSatelliteStats,
@@ -16,10 +28,27 @@ export function DatabaseModule() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [healthStatus, setHealthStatus] = useState<'connected' | 'disconnected' | 'checking'>('checking')
-  const [filters, setFilters] = useState<SatelliteFilters>({ limit: 50 })
+  const [filters, setFilters] = useState<SatelliteFilters>({})
   const [searchTerm, setSearchTerm] = useState('')
   const [selectedOrbit, setSelectedOrbit] = useState<string>('')
   const [ingesting, setIngesting] = useState(false)
+
+  // Expandable rows state
+  const [expandedRows, setExpandedRows] = useState<Set<string>>(new Set())
+
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1)
+  const [itemsPerPage, setItemsPerPage] = useState(50)
+
+  // Column filters
+  const [columnFilters, setColumnFilters] = useState({
+    norad_id: '',
+    name: '',
+    owner: '',
+    orbit: '',
+    band: '',
+    launch_date: '',
+  })
 
   // Check backend health
   const checkHealth = async () => {
@@ -87,6 +116,29 @@ export function DatabaseModule() {
     }
   }
 
+  // Toggle row expansion
+  const toggleRow = (id: string) => {
+    const newExpanded = new Set(expandedRows)
+    if (newExpanded.has(id)) {
+      newExpanded.delete(id)
+    } else {
+      newExpanded.add(id)
+    }
+    setExpandedRows(newExpanded)
+  }
+
+  // Clear all filters
+  const clearColumnFilters = () => {
+    setColumnFilters({
+      norad_id: '',
+      name: '',
+      owner: '',
+      orbit: '',
+      band: '',
+      launch_date: '',
+    })
+  }
+
   // Initial load
   useEffect(() => {
     loadData()
@@ -99,11 +151,44 @@ export function DatabaseModule() {
     }
   }, [filters])
 
-  // Filter satellites by search term
-  const filteredSatellites = satellites.filter((sat) =>
-    sat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    sat.norad_id.toString().includes(searchTerm)
-  )
+  // Filter satellites by search term and column filters
+  const filteredSatellites = satellites.filter((sat) => {
+    // Global search
+    const matchesSearch =
+      sat.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      sat.norad_id.toString().includes(searchTerm)
+
+    // Column filters
+    const matchesNoradFilter = sat.norad_id.toString().includes(columnFilters.norad_id)
+    const matchesNameFilter = sat.name.toLowerCase().includes(columnFilters.name.toLowerCase())
+    const matchesOwnerFilter = !columnFilters.owner ||
+      (sat.owner && sat.owner.toLowerCase().includes(columnFilters.owner.toLowerCase()))
+    const matchesOrbitFilter = !columnFilters.orbit ||
+      (sat.orbit_class && sat.orbit_class.toLowerCase().includes(columnFilters.orbit.toLowerCase()))
+    const matchesBandFilter = !columnFilters.band ||
+      (sat.bands && Array.isArray(sat.bands) && sat.bands.some(band => band.toLowerCase().includes(columnFilters.band.toLowerCase())))
+    const matchesLaunchDateFilter = !columnFilters.launch_date ||
+      (sat.launch_date && sat.launch_date.includes(columnFilters.launch_date))
+
+    return matchesSearch &&
+           matchesNoradFilter &&
+           matchesNameFilter &&
+           matchesOwnerFilter &&
+           matchesOrbitFilter &&
+           matchesBandFilter &&
+           matchesLaunchDateFilter
+  })
+
+  // Pagination
+  const totalPages = Math.ceil(filteredSatellites.length / itemsPerPage)
+  const startIndex = (currentPage - 1) * itemsPerPage
+  const endIndex = startIndex + itemsPerPage
+  const paginatedSatellites = filteredSatellites.slice(startIndex, endIndex)
+
+  // Reset to page 1 when filters change
+  useEffect(() => {
+    setCurrentPage(1)
+  }, [searchTerm, columnFilters, selectedOrbit])
 
   return (
     <div className="h-full p-6 overflow-auto">
@@ -221,6 +306,15 @@ export function DatabaseModule() {
                 <option value="HEO">HEO</option>
               </select>
 
+              {/* Clear Filters Button */}
+              <button
+                onClick={clearColumnFilters}
+                className="px-4 py-2 bg-background/50 border border-border rounded-lg hover:bg-background transition-colors flex items-center gap-2"
+              >
+                <X className="w-4 h-4" />
+                Clear Filters
+              </button>
+
               {/* Refresh Button */}
               <button
                 onClick={() => loadData()}
@@ -277,84 +371,342 @@ export function DatabaseModule() {
             className="panel"
           >
             <div className="panel-content p-0">
+              {/* Results Info */}
+              <div className="px-4 py-3 border-b border-border bg-background/50 flex items-center justify-between">
+                <div className="text-sm text-muted-foreground">
+                  Showing {startIndex + 1}-{Math.min(endIndex, filteredSatellites.length)} of {filteredSatellites.length} satellites
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-muted-foreground">Per page:</span>
+                  <select
+                    value={itemsPerPage}
+                    onChange={(e) => {
+                      setItemsPerPage(Number(e.target.value))
+                      setCurrentPage(1)
+                    }}
+                    className="px-2 py-1 text-sm bg-background border border-border rounded focus:outline-none focus:ring-2 focus:ring-primary/50"
+                  >
+                    <option value={25}>25</option>
+                    <option value={50}>50</option>
+                    <option value={100}>100</option>
+                    <option value={250}>250</option>
+                    <option value={500}>500</option>
+                  </select>
+                </div>
+              </div>
+
               <div className="overflow-x-auto">
                 <table className="w-full">
-                  <thead className="border-b border-border">
+                  <thead className="border-b border-border bg-background/50">
+                    {/* Column Headers */}
                     <tr>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">NORAD ID</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Name</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Owner</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Orbit</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Launch Date</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">Bands</th>
-                      <th className="px-4 py-3 text-left text-sm font-medium text-muted-foreground">TLE</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider w-12"></th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">NORAD ID</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Name</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Owner</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Orbit</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Band</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">Launch Date</th>
+                      <th className="px-4 py-2 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider">TLE</th>
+                    </tr>
+                    {/* Filter Row */}
+                    <tr>
+                      <th className="px-4 py-2"></th>
+                      <th className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="Filter..."
+                          value={columnFilters.norad_id}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, norad_id: e.target.value })}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                      </th>
+                      <th className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="Filter..."
+                          value={columnFilters.name}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, name: e.target.value })}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                      </th>
+                      <th className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="Filter..."
+                          value={columnFilters.owner}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, owner: e.target.value })}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                      </th>
+                      <th className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="Filter..."
+                          value={columnFilters.orbit}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, orbit: e.target.value })}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                      </th>
+                      <th className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="Filter..."
+                          value={columnFilters.band}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, band: e.target.value })}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                      </th>
+                      <th className="px-4 py-2">
+                        <input
+                          type="text"
+                          placeholder="Filter..."
+                          value={columnFilters.launch_date}
+                          onChange={(e) => setColumnFilters({ ...columnFilters, launch_date: e.target.value })}
+                          className="w-full px-2 py-1 text-xs bg-background border border-border rounded focus:outline-none focus:ring-1 focus:ring-primary/50"
+                        />
+                      </th>
+                      <th className="px-4 py-2"></th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
-                    {filteredSatellites.length === 0 ? (
+                    {paginatedSatellites.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="px-4 py-12 text-center text-muted-foreground">
+                        <td colSpan={8} className="px-4 py-12 text-center text-muted-foreground">
                           <Satellite className="w-12 h-12 mx-auto mb-2 opacity-50" />
                           <div>No satellites found</div>
-                          {searchTerm && (
+                          {(searchTerm || Object.values(columnFilters).some(v => v)) && (
                             <div className="text-sm mt-1">Try adjusting your search or filters</div>
                           )}
                         </td>
                       </tr>
                     ) : (
-                      filteredSatellites.map((sat) => (
-                        <tr key={sat.id} className="hover:bg-background/50 transition-colors">
-                          <td className="px-4 py-3 text-sm font-mono">{sat.norad_id}</td>
-                          <td className="px-4 py-3 text-sm font-medium">{sat.name}</td>
-                          <td className="px-4 py-3 text-sm">{sat.owner || '-'}</td>
-                          <td className="px-4 py-3 text-sm">
-                            {sat.orbit_class ? (
-                              <span className={`px-2 py-1 rounded text-xs font-medium ${
-                                sat.orbit_class === 'LEO' ? 'bg-blue-500/20 text-blue-400' :
-                                sat.orbit_class === 'MEO' ? 'bg-green-500/20 text-green-400' :
-                                sat.orbit_class === 'GEO' ? 'bg-purple-500/20 text-purple-400' :
-                                sat.orbit_class === 'HEO' ? 'bg-orange-500/20 text-orange-400' :
-                                'bg-gray-500/20 text-gray-400'
-                              }`}>
-                                {sat.orbit_class}
-                              </span>
-                            ) : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {sat.launch_date ? new Date(sat.launch_date).toLocaleDateString() : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {sat.bands.length > 0 ? (
-                              <div className="flex gap-1 flex-wrap">
-                                {sat.bands.slice(0, 3).map((band) => (
-                                  <span
-                                    key={band}
-                                    className="px-1.5 py-0.5 rounded text-xs bg-primary/20 text-primary-foreground"
-                                  >
-                                    {band}
-                                  </span>
-                                ))}
-                                {sat.bands.length > 3 && (
-                                  <span className="px-1.5 py-0.5 rounded text-xs bg-primary/20 text-primary-foreground">
-                                    +{sat.bands.length - 3}
-                                  </span>
+                      paginatedSatellites.map((sat) => (
+                        <React.Fragment key={sat.id}>
+                          {/* Main Row */}
+                          <tr className="hover:bg-background/50 transition-colors">
+                            <td className="px-4 py-3">
+                              <button
+                                onClick={() => toggleRow(sat.id)}
+                                className="text-muted-foreground hover:text-foreground transition-colors"
+                              >
+                                {expandedRows.has(sat.id) ? (
+                                  <ChevronDown className="w-4 h-4" />
+                                ) : (
+                                  <ChevronRight className="w-4 h-4" />
                                 )}
-                              </div>
-                            ) : '-'}
-                          </td>
-                          <td className="px-4 py-3 text-sm">
-                            {sat.tle ? (
-                              <CheckCircle className="w-4 h-4 text-green-500" />
-                            ) : (
-                              <XCircle className="w-4 h-4 text-red-500" />
+                              </button>
+                            </td>
+                            <td className="px-4 py-3 text-sm font-mono">{sat.norad_id}</td>
+                            <td className="px-4 py-3 text-sm font-medium">{sat.name}</td>
+                            <td className="px-4 py-3 text-sm">{sat.owner || '-'}</td>
+                            <td className="px-4 py-3 text-sm">
+                              {sat.orbit_class ? (
+                                <span className={`px-2 py-1 rounded text-xs font-medium ${
+                                  sat.orbit_class === 'LEO' ? 'bg-blue-500/20 text-blue-400' :
+                                  sat.orbit_class === 'MEO' ? 'bg-green-500/20 text-green-400' :
+                                  sat.orbit_class === 'GEO' ? 'bg-purple-500/20 text-purple-400' :
+                                  sat.orbit_class === 'HEO' ? 'bg-orange-500/20 text-orange-400' :
+                                  'bg-gray-500/20 text-gray-400'
+                                }`}>
+                                  {sat.orbit_class}
+                                </span>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {sat.bands && sat.bands.length > 0 ? (
+                                <div className="flex gap-1 flex-wrap">
+                                  {sat.bands.slice(0, 2).map((band) => (
+                                    <span
+                                      key={band}
+                                      className="px-1.5 py-0.5 rounded text-xs bg-primary/20 text-primary-foreground"
+                                    >
+                                      {band}
+                                    </span>
+                                  ))}
+                                  {sat.bands.length > 2 && (
+                                    <span className="px-1.5 py-0.5 rounded text-xs bg-primary/20 text-primary-foreground">
+                                      +{sat.bands.length - 2}
+                                    </span>
+                                  )}
+                                </div>
+                              ) : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {sat.launch_date ? new Date(sat.launch_date).toLocaleDateString() : '-'}
+                            </td>
+                            <td className="px-4 py-3 text-sm">
+                              {sat.tle ? (
+                                <CheckCircle className="w-4 h-4 text-green-500" />
+                              ) : (
+                                <XCircle className="w-4 h-4 text-red-500" />
+                              )}
+                            </td>
+                          </tr>
+
+                          {/* Expanded Detail Row */}
+                          <AnimatePresence>
+                            {expandedRows.has(sat.id) && (
+                              <tr>
+                                <td colSpan={8} className="p-0">
+                                  <motion.div
+                                    initial={{ height: 0, opacity: 0 }}
+                                    animate={{ height: 'auto', opacity: 1 }}
+                                    exit={{ height: 0, opacity: 0 }}
+                                    transition={{ duration: 0.2 }}
+                                    className="overflow-hidden bg-background/30"
+                                  >
+                                    <div className="px-6 py-4 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 border-l-2 border-primary/50">
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1">NORAD Catalog ID</div>
+                                        <div className="text-sm font-mono">{sat.norad_id}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1">Satellite Name</div>
+                                        <div className="text-sm font-medium">{sat.name}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1">Owner/Operator</div>
+                                        <div className="text-sm">{sat.owner || 'Unknown'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1">Orbit Classification</div>
+                                        <div className="text-sm">{sat.orbit_class || 'Unknown'}</div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1">Launch Date</div>
+                                        <div className="text-sm">
+                                          {sat.launch_date ? new Date(sat.launch_date).toLocaleDateString('en-US', {
+                                            year: 'numeric',
+                                            month: 'long',
+                                            day: 'numeric'
+                                          }) : 'Unknown'}
+                                        </div>
+                                      </div>
+                                      <div>
+                                        <div className="text-xs text-muted-foreground mb-1">TLE Status</div>
+                                        <div className="text-sm flex items-center gap-2">
+                                          {sat.tle ? (
+                                            <>
+                                              <CheckCircle className="w-4 h-4 text-green-500" />
+                                              <span>Available</span>
+                                            </>
+                                          ) : (
+                                            <>
+                                              <XCircle className="w-4 h-4 text-red-500" />
+                                              <span>Not Available</span>
+                                            </>
+                                          )}
+                                        </div>
+                                      </div>
+                                      <div className="md:col-span-2 lg:col-span-3">
+                                        <div className="text-xs text-muted-foreground mb-1">Frequency Bands</div>
+                                        <div className="flex gap-2 flex-wrap">
+                                          {sat.bands.length > 0 ? (
+                                            sat.bands.map((band) => (
+                                              <span
+                                                key={band}
+                                                className="px-2 py-1 rounded text-xs bg-primary/20 text-primary-foreground"
+                                              >
+                                                {band}
+                                              </span>
+                                            ))
+                                          ) : (
+                                            <span className="text-sm text-muted-foreground">No frequency data available</span>
+                                          )}
+                                        </div>
+                                      </div>
+                                      {sat.tle && (
+                                        <div className="md:col-span-2 lg:col-span-3">
+                                          <div className="text-xs text-muted-foreground mb-1">Two-Line Element Set</div>
+                                          <div className="bg-background/50 rounded p-2 font-mono text-xs">
+                                            <div>{sat.tle.line1}</div>
+                                            <div>{sat.tle.line2}</div>
+                                          </div>
+                                        </div>
+                                      )}
+                                    </div>
+                                  </motion.div>
+                                </td>
+                              </tr>
                             )}
-                          </td>
-                        </tr>
+                          </AnimatePresence>
+                        </React.Fragment>
                       ))
                     )}
                   </tbody>
                 </table>
               </div>
+
+              {/* Pagination Controls */}
+              {filteredSatellites.length > 0 && (
+                <div className="px-4 py-3 border-t border-border bg-background/50 flex items-center justify-between">
+                  <div className="text-sm text-muted-foreground">
+                    Page {currentPage} of {totalPages}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setCurrentPage(1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm rounded border border-border hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 text-sm rounded border border-border hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Previous
+                    </button>
+
+                    {/* Page numbers */}
+                    <div className="flex items-center gap-1">
+                      {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                        let pageNum
+                        if (totalPages <= 5) {
+                          pageNum = i + 1
+                        } else if (currentPage <= 3) {
+                          pageNum = i + 1
+                        } else if (currentPage >= totalPages - 2) {
+                          pageNum = totalPages - 4 + i
+                        } else {
+                          pageNum = currentPage - 2 + i
+                        }
+
+                        return (
+                          <button
+                            key={pageNum}
+                            onClick={() => setCurrentPage(pageNum)}
+                            className={`w-8 h-8 text-sm rounded ${
+                              currentPage === pageNum
+                                ? 'bg-primary text-primary-foreground'
+                                : 'border border-border hover:bg-background'
+                            } transition-colors`}
+                          >
+                            {pageNum}
+                          </button>
+                        )
+                      })}
+                    </div>
+
+                    <button
+                      onClick={() => setCurrentPage(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm rounded border border-border hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={() => setCurrentPage(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 text-sm rounded border border-border hover:bg-background disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                    >
+                      Last
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
           </motion.div>
         )}
