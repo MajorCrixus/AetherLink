@@ -35,8 +35,8 @@ requestOMMSatellite = "/class/omm/NORAD_CAT_ID/{}/orderby/EPOCH%20desc/limit/1/f
 requestSatcatSatellite = "/class/satcat/NORAD_CAT_ID/{}/format/json"
 
 # Credentials from environment
-username = os.environ.get('SPACETRACK_USERNAME', 'james.d.odum.mil@mail.mil')
-password = os.environ.get('SPACETRACK_PASSWORD', 'Ky13!gh03202007')
+username = os.environ.get('SPACETRACK_USERNAME', '.mil@mail.mil')
+password = os.environ.get('SPACETRACK_PASSWORD', 'K......########')
 siteCred = {'identity': username, 'password': password}
 
 output_dir = '/home/major/aetherlink/temp'
