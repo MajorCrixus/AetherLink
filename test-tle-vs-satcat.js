@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Test tle_latest vs satcat for bulk queries
 
-const username = 'james.d.odum.mil@mail.mil';
-const password = 'Ky13!gh03202007';
+const username = '.mil@mail.mil';
+const password = 'K......########';
 
 async function test() {
   // Login
