@@ -3,8 +3,8 @@
  * Log in to Space-Track and read the full API documentation
  */
 
-const username = 'james.d.odum.mil@mail.mil';
-const password = 'Ky13!gh03202007';
+const username = '.mil@mail.mil';
+const password = 'K......########';
 
 async function readDocs() {
   console.log('Logging in to Space-Track.org...');
