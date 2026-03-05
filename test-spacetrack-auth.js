@@ -12,8 +12,8 @@ const https = require('https');
 const http = require('http');
 
 // Space-Track credentials (from environment or hardcoded)
-const USERNAME = process.env.SPACETRACK_USER || 'james.d.odum.mil@mail.mil';
-const PASSWORD = process.env.SPACETRACK_PASS || 'Ky13!gh03202007';
+const USERNAME = process.env.SPACETRACK_USER || '.mil@mail.mil';
+const PASSWORD = process.env.SPACETRACK_PASS || 'K......#########';
 
 console.log('============================================================');
 console.log('Space-Track Authentication Test');
