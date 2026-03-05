@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 // Test the EXACT query pattern from SLTrack.py that works
 
-const username = 'james.d.odum.mil@mail.mil';
-const password = 'Ky13!gh03202007';
+const username = '.mil@mail.mil';
+const password = 'K......########';
 
 async function test() {
   // Login
